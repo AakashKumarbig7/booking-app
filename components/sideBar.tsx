@@ -74,7 +74,7 @@ const SideBar = () => {
   return (
     <div className="h-full">
       <div
-        className={`sticky top-0 h-screen  ${
+        className={` relative h-screen  ${
           collapsed ? "w-16 hover:w-[220px]" : "w-[220px]"
         } bg-teal-900 text-white z-50 select-none transition-width duration-300 ease-in-out` }
         onMouseEnter={() => collapsed && setIsHovered(true)}
@@ -144,7 +144,7 @@ const SideBar = () => {
           </ul>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-teal-800">
+        <div className="absolute bottom-0 left-0 right-0 p-3  border-t border-teal-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center cursor-pointer" onClick={() => router.push("/profile")}>
               <Avatar className="h-8 w-8 border border-teal-700">

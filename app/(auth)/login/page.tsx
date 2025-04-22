@@ -26,17 +26,31 @@ export default function Login() {
     return data?.logo || null;
   };
 
-  useEffect(() => {
-    const fetchLogoUrl = async () => {
-      const logoUrl = await fetchLogo();
-      setLogoUrl(logoUrl);
-    };
-    fetchLogoUrl();
-  }, []);
+  // useEffect(() => {
+  //   const fetchLogoUrl = async () => {
+  //     const logoUrl = await fetchLogo();
+  //     setLogoUrl(logoUrl);
+  //   };
+  //   fetchLogoUrl();
+  // }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+// console.log(formData.get("email"));
+// console.log(formData.get("password"));
+const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+console.log("working");
+  const { error } = await supabase.auth.signInWithPassword({  
+    email,
+    password,
+  });
+
+  if (error) {
+    // Return a structured error response
+    console.log(error);
+  }
 
     const fetchData = async () => {
       const { data } = await supabase
@@ -52,7 +66,7 @@ export default function Login() {
           </Message>,
           { placement: "topEnd", duration: 2000 }
         );
-        if (data?.access === "admin") window.location.href = "/organsiation";
+        if (data?.access === "admin") window.location.href = "/organisation";
         else if (data?.access === "user") window.location.href = "/home";
         else window.location.href = "/dashboard-sa";
       } else {
@@ -67,25 +81,25 @@ export default function Login() {
     };
 
     setLoading(true);
+    fetchData();
+    // const response = await fetch("/auth/login", {
+    //   method: "POST",
+    //   body: formData,
+    // });
 
-    const response = await fetch("/auth/login", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      setLoading(false);
-      toaster.push(
-        <Message showIcon type={"error"}>
-          <strong>{data.error}!</strong>
-        </Message>,
-        { placement: "topEnd", duration: 3000 }
-      );
-    } else {
-      setErrorMessage("");
-      fetchData();
-    }
+    // if (!response.ok) {
+    //   const data = await response.json();
+    //   setLoading(false);
+    //   toaster.push(
+    //     <Message showIcon type={"error"}>
+    //       <strong>{data.error}!</strong>
+    //     </Message>,
+    //     { placement: "topEnd", duration: 3000 }
+    //   );
+    // } else {
+    //   setErrorMessage("");
+    //   fetchData();
+    // }
   };
 
   return (

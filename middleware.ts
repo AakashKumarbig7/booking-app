@@ -7,8 +7,8 @@ import { createClient } from "@/utils/supabase/server";
 export async function middleware(request: NextRequest) {
   // Update session
   const response = await updateSession(request);
-  const supabase = createClient();
-  const {data:user}= await supabase?.auth?.getUser();
+  const supabase = await createClient();
+  const { data: user } = await supabase.auth.getUser();
 
   const {data}= await supabase
   .from('users')

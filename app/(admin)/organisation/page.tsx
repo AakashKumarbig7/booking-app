@@ -13,7 +13,7 @@ import {
 import { TimePicker } from 'antd';
 
 import dayjs, { Dayjs } from "dayjs";
-import { useState } from "react";
+import { use, useEffect, useState } from "react";
 import { createClient } from '@/utils/supabase/client';
 type Day = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
 
@@ -52,9 +52,23 @@ const Organisation = () => {
   });
   const[data,setData]=useState<any[]>();
 
+
     function handleSave(): void {
         throw new Error("Function not implemented.");
     }
+    const fetchUser =async () =>
+    {
+      const { data, error } =await supabase
+      .from("users")
+      .select("*")
+      setData(data || []);
+      if (error) {
+        console.log(error);
+      }
+    }
+    useEffect(() => {
+      fetchUser();
+    }, []);
     
     
   return (

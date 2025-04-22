@@ -10,11 +10,11 @@ export default function RootLayout({
   return (
     <div className="h-screen w-full bg-white text-black">
       <main className="w-full h-screen">
-        <div className="w-full flex relative">
-          <div className={`absolute top-0 left-0 h-screen w-16  z-10`}>
+        <div className=" flex ">
+          <div className={` h-screen `}>
             <SideBar />
           </div>
-          <div className="custom-scroll h-screen ml-16 w-full">{children}</div>
+          <div className="custom-scroll h-screen max-h-screen overflow-y-scroll">{children}</div>
         </div>
       </main>
     </div>
