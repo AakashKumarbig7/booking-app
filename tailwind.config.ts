@@ -11,6 +11,7 @@ const config: Config = {
     extend: {
       colors: {
         border: "hsl(var(--border))",
+      
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
@@ -45,6 +46,8 @@ const config: Config = {
         },
         border_color: "rgba(0, 0, 0, 0.1)",
         button_orange: "rgba(255, 165, 0, 0.1)",
+        bgborder_color: '#CBCBCB'
+       
         // primary: {
         //   50: "#f0f9ff",
         //   100: "#e0f2fe",
@@ -76,6 +79,7 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
     },
+    
   },
   plugins: [require("tailwindcss-animate")],
 }

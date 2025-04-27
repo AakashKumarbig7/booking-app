@@ -15,6 +15,7 @@ import {
   BarChart3,
   Crown,
   LayoutDashboard,
+  FlagTriangleRight,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Image from "next/image"
@@ -42,7 +43,7 @@ const SideBar = () => {
   const navlinks = [
     { name: "organisation", icon: <Building2 size={18} />, label: "Organisation" },
     { name: "staff-management", icon: <Users2 size={18} />, label: "Staff Management" },
-    { name: "sports-management", icon: <Trophy size={18} />, label: "Sports Management" },
+    { name: "sports-management", icon: <FlagTriangleRight size={18} />, label: "Sports Management" },
     { name: "pos-setting", icon: <ShoppingCart size={18} />, label: "POS Settings" },
     { name: "loyalty-management", icon: <Crown size={18} />, label: "Loyalty Management" },
     { name: "notifications", icon: <Bell size={18} />, label: "Notification" },

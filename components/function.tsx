@@ -6,6 +6,10 @@ const supabase = createClient();
 interface State {
   user: any;
   company: any;
+  storeName: string | null;
+  timeFormat: string | null;
+  timeZone: string | null;
+  
  
 }
 
@@ -13,6 +17,11 @@ export const functions = () => {
   const [state, setState] = useState<State>({
     user: null,
     company: null,
+    storeName: null,
+    timeFormat: "12 hours",
+    timeZone: "Australia/Melbourne",
+
+    
     
   });
 
@@ -32,10 +41,15 @@ export const functions = () => {
           .select("*")
           .eq("store_admin", user.email)
           .single();
+          console.log(companyData)
 
         const newState: State = {
           user,
           company: companyData ?? null,
+          storeName: companyData?.name ?? null,
+          timeFormat: companyData?.time_format ?? "12 hours",
+          timeZone: companyData?.timezone ?? "Australia/Melbourne",
+         
           
 
         };
