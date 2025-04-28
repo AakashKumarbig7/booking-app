@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { CheckCircle, Eye, EyeOff, TriangleAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
+// import Link from 'next/link';
+// import Image from 'next/image';
 import { createClient } from "@/utils/supabase/client";
 
 const supabase = createClient();
@@ -17,32 +17,32 @@ export default function ResetPassword({ searchParams }: { searchParams: { messag
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(searchParams?.message || null);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  // const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const router = useRouter();
   
 
   const handleResetPassword = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    const fetchLogo = async () => {
-      const { data, error } = await supabase
-        .from('app_settings')
-        .select('logo')
-        .single();
+    // const fetchLogo = async () => {
+    //   const { data, error } = await supabase
+    //     .from('app_settings')
+    //     .select('logo')
+    //     .single();
     
-      if (error) {
-        return null;
-      }
-      return data?.logo || null;
-    };
+    //   if (error) {
+    //     return null;
+    //   }
+    //   return data?.logo || null;
+    // };
   
-    useEffect(() => {
-      const fetchLogoUrl = async () => {
-        const logoUrl = await fetchLogo();
-        setLogoUrl(logoUrl);
-      };
-      fetchLogoUrl();
-    }, []);
+    // useEffect(() => {
+    //   const fetchLogoUrl = async () => {
+    //     const logoUrl = await fetchLogo();
+    //     setLogoUrl(logoUrl);
+    //   };
+    //   fetchLogoUrl();
+    // }, []);
 
     if (password !== confirmPassword) {
       setMessage('Passwords do not match.');
@@ -91,14 +91,14 @@ export default function ResetPassword({ searchParams }: { searchParams: { messag
     <div className="flex w-full h-full overflow-hidden">
 
 <div className="absolute top-0 left-0 p-4">
-      <Link href="/dashboard">
+      {/* <Link href="/dashboard">
         <Image
               src = {logoUrl || '/images/logo.png'}
               width={106}
               height={40}
               alt="logo"
               className="rounded  py-[1px] bg-white"
-            />        </Link>
+            />        </Link> */}
       </div>
 
       <div className="w-1/2 flex items-center justify-center p-6">
@@ -212,7 +212,7 @@ export default function ResetPassword({ searchParams }: { searchParams: { messag
       </div>
 
       <div className="w-1/2">
-        <div
+        {/* <div
           className="bg-cover bg-center z-1 h-full shadow-2xl"
           style={{
             backgroundImage: 'url("/images/login-banner.webp")',
@@ -220,7 +220,7 @@ export default function ResetPassword({ searchParams }: { searchParams: { messag
             backgroundPosition: 'bottom',
             backgroundSize: 'cover',
           }}
-        ></div>
+        ></div> */}
       </div>
     </div>
   );

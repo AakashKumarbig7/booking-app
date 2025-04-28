@@ -113,7 +113,7 @@ const AccessLevel = () => {
   const [data, setData] = useState<DataItem[]>([])
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
   const supabase = createClient()
-  const [options, setOptions] = useState<Option[]>([])
+  // const [options, setOptions] = useState<Option[]>([])
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [permissionLists, setPermissionLists] = useState<any[]>(allPermission)
@@ -172,8 +172,8 @@ const AccessLevel = () => {
     }
     else
     {
-      console.log(error),
-      console.log(currentUser)
+      // console.log(error),
+      // console.log(currentUser)
       
     }
   }

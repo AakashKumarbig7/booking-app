@@ -5,28 +5,27 @@ import { createClient } from "@/utils/supabase/client"
 import {
   Bell,
   Building2,
-  ChevronLeft,
-  ChevronRight,
+ 
   Home,
   LogOut,
   ShoppingCart,
-  Trophy,
+  // Trophy,
   Users2,
   BarChart3,
   Crown,
-  LayoutDashboard,
+  // LayoutDashboard,
   FlagTriangleRight,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Image from "next/image"
 
 const SideBar = () => {
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  // const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(true)
   const [isHovered, setIsHovered] = useState(false)
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [loadingMenu, setLoadingMenu] = useState<string | null>(null)
-  const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null)
+  // const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null)
   const router = useRouter()
   const pathname = usePathname()
 
@@ -66,11 +65,11 @@ const SideBar = () => {
     setLoadingMenu(null)
   }, [pathname])
 
-  const toggleSidebar = () => {
-    setCollapsed(prev => !prev)
-  }
+  // const toggleSidebar = () => {
+  //   setCollapsed(prev => !prev)
+  // }
 
-  const sidebarWidth = collapsed && !isHovered ? "w-16" : "w-[220px]"
+  // const sidebarWidth = collapsed && !isHovered ? "w-16" : "w-[220px]"
 
   return (
     <div className="h-full">

@@ -37,8 +37,8 @@ const EmployeeTable = ({ employees, loading, onEditClick, onDeleteClick }: Emplo
       <Table
         data={employees}
         loading={loading}
-        height={400}
-        rowHeight={60}
+       autoHeight
+       className="rounded-[8px]"
         onRowClick={(rowData) => {
           console.log(rowData)
         }}
@@ -107,7 +107,7 @@ const EmployeeTable = ({ employees, loading, onEditClick, onDeleteClick }: Emplo
                 <div
                  
                   
-                  className="items-center hover:text-blue-700 cursor-pointer"
+                  className="flex items-center hover:text-teal-700 cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation()
                     onEditClick(rowData)

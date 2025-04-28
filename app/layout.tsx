@@ -1,10 +1,8 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+
+
 import "./globals.css";
 import "@fontsource/inter";
 import 'rsuite/dist/rsuite-no-reset.min.css'
-import { toast } from "sonner"
-
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AntdRegistry } from '@ant-design/nextjs-registry';

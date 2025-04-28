@@ -1,70 +1,77 @@
-import type { DatePickerProps } from 'antd';
-import { DatePicker, Space } from 'antd';
-import dayjs from 'dayjs';
-import timezone from 'dayjs/plugin/timezone'; // Import timezone plugin
-import utc from 'dayjs/plugin/utc'; // Import UTC plugin
-import { useEffect, useState } from 'react';
-import { createClient } from "@/utils/supabase/client";
-import { useGlobalContext } from '@/context/store';
+"use client"
 
-dayjs.extend(utc);
-dayjs.extend(timezone);
+import type { DatePickerProps } from "antd"
+import { DatePicker } from "antd"
+import dayjs from "dayjs"
+import timezone from "dayjs/plugin/timezone" // Import timezone plugin
+import utc from "dayjs/plugin/utc" // Import UTC plugin
+import { useEffect, useState } from "react"
+import { createClient } from "@/utils/supabase/client"
+import { useGlobalContext } from "@/context/store"
 
-const DatePickerComponent = ({ value, onChange }: DatePickerProps) => {
-   const supabase = createClient();
-   const { user: currentUser } = useGlobalContext();
-   const [loading, setLoading] = useState(true);
-   const [dateFormat, setDateFormat] = useState<string>("");
-   const [timeZone, setTimeZone] = useState<string>("");
+dayjs.extend(utc)
+dayjs.extend(timezone)
+
+const DatePickerComponent = ({ value, onChange, ...props }: DatePickerProps) => {
+  const supabase = createClient()
+  const { user: currentUser } = useGlobalContext()
+  const [dateFormat, setDateFormat] = useState<string>("MM/DD/YYYY")
+  const [timeZone, setTimeZone] = useState<string>("Australia/Melbourne")
 
   async function fetchData() {
-    // const { data: user } = await supabase.auth.getUser();
-    const { data: company } = await supabase
-      .from("companies")
-      .select("*")
-      .eq("store_admin", currentUser?.email)
-      .single();
-    // setUser(user.user);
-    if (company) {
-      setDateFormat(company.date_format);
-      setTimeZone(company.timezone);
-      // setData(company.store_department);
-      // setOptions(company.store_locations);
+    try {
+      const { data: company } = await supabase
+        .from("companies")
+        .select("*")
+        .eq("store_admin", currentUser?.email)
+        .single()
+
+      if (company) {
+        setDateFormat(company.date_format || "MM/DD/YYYY")
+        setTimeZone(company.timezone || "Australia/Melbourne")
+      }
+    } catch (error) {
+      console.error("Error fetching company data:", error)
     }
-    console.log("company", company);
   }
 
   useEffect(() => {
-      // if (typeof window !== "undefined") {
-      //   const sessionData = sessionStorage.getItem("storeState");
-      //   if (sessionData) {
-      //     const parsedData = JSON.parse(sessionData);
-      //     if (parsedData.company === null) {
-      //       fetchData().then(() => {
-      //         setLoading(false);
-      //       });
-      //     } else {
-      //       setDateFormat(parsedData.company.date_format);
-      //       setTimeZone(parsedData.company.timezone);
-      //       setLoading(false);
-      //     }
-      //   }
-      // }
-      fetchData().then(() => {
-        setLoading(false);
-      });
-    }, []);
-  return (
-    // <Space direction="vertical" style={{ width: '100%' }}>
-      <DatePicker
-        value={value ? dayjs(value).locale('en').tz(timeZone || "Australia/Melbourne", true) : null}
-        onChange={onChange}
-        className="w-full custom_date_picker"
-        needConfirm={false}
-        format={dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY"}
-      />
-    // </Space>
-  );
-};
+    if (currentUser?.email) {
+      fetchData()
+    }
+  }, [currentUser?.email])
 
-export default DatePickerComponent;
+  // Safely parse the date value
+  const parseDate = (dateValue: any) => {
+    if (!dateValue) return null
+
+    try {
+      // Check if it's already a dayjs object
+      if (dayjs.isDayjs(dateValue)) return dateValue
+
+      // Try to parse the date string
+      const parsedDate = dayjs(dateValue)
+
+      // Validate the parsed date
+      if (!parsedDate.isValid()) return null
+
+      return parsedDate
+    } catch (error) {
+      console.error("Error parsing date:", error)
+      return null
+    }
+  }
+
+  return (
+    <DatePicker
+      value={parseDate(value)}
+      onChange={onChange}
+      className={`w-full custom_date_picker ${props.className || ""}`}
+      needConfirm={false}
+      format={dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY"}
+      {...props}
+    />
+  )
+}
+
+export default DatePickerComponent

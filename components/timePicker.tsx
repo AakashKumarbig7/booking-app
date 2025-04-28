@@ -26,7 +26,7 @@ export const Time = (time: any, onChange: any) => {
       onChange={onChange}
       use12Hours={timeFormat === "12 hours"} 
       format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm"} 
-      className="w-full custom_date_picker"
+      className="w-full"
       needConfirm={false}
     />
 

@@ -196,7 +196,7 @@ export default function SignUp() {
         </form>
       </div>
       <div className="w-1/2">
-        <div
+        {/* <div
           className="bg-cover bg-center z-1 h-full shadow-2xl"
           style={{
             backgroundImage: 'url("/images/login-banner.webp")',
@@ -204,7 +204,7 @@ export default function SignUp() {
             backgroundPosition: 'top',
             backgroundSize: 'cover',
           }}
-        ></div>
+        ></div> */}
       </div>
     </div>
   );

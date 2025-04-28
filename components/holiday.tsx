@@ -1,16 +1,9 @@
-"use client";
-import { FilePlus, SquarePen, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Table } from "rsuite";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { createClient } from "@/utils/supabase/client";
+"use client"
+import { FilePlus, SquarePen, Trash2 } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Table } from "rsuite"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { createClient } from "@/utils/supabase/client"
 import {
   Dialog,
   DialogContent,
@@ -18,211 +11,193 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { useGlobalContext } from "@/context/store";
-import { DatePicker } from 'antd';
-import dayjs from 'dayjs';
-import customParseFormat from 'dayjs/plugin/customParseFormat';
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { useGlobalContext } from "@/context/store"
+import DatePickerComponent from "./datePicker"
+import { format } from "date-fns"
 
-dayjs.extend(customParseFormat);
+// dayjs.extend(customParseFormat);
 
-interface Holiday {
-  id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-}
+// interface Holiday {
+//   id: string;
+//   name: string;
+//   startDate: string;
+//   endDate: string;
+// }
 
 const Holidays = () => {
-  const supabase = createClient();
-  const { user: currentUser } = useGlobalContext();
-  const [openAdd, setOpenAdd] = useState(false);
-  const [editData, setEditData] = useState<Holiday | null>(null);
-  const [oldEditData, setOldEditData] = useState<Holiday | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<Holiday[]>([]);
-  const { Column, HeaderCell, Cell } = Table;
-  const [sortColumn, setSortColumn] = useState<string>();
-  const [sortType, setSortType] = useState<'asc' | 'desc'>();
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [openEdit, setOpenEdit] = useState(false);
-  const [dateFormat, setDateFormat] = useState<string>("MM/DD/YYYY");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const supabase = createClient()
+  const { user: currentUser } = useGlobalContext()
+  const [openAdd, setOpenAdd] = useState(false)
+  const [editData, setEditData] = useState<any>()
+  const [oldEditData, setOldEditData] = useState<any>()
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<any[]>([])
+  const { Column, HeaderCell, Cell } = Table
+  const [sortColumn, setSortColumn] = useState<string>()
+  const [sortType, setSortType] = useState<"asc" | "desc">()
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [openEdit, setOpenEdit] = useState(false)
+  const [dateFormat, setDateFormat] = useState<string>("")
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  const convertDateFormat = (format: string): string => {
+    return format
+      .replace(/DD/g, "dd") // Day of month: 01-31
+      .replace(/MM/g, "MM") // Month: 01-12
+      .replace(/MMM/g, "MMM") // Month name abbreviated
+      .replace(/YYYY/g, "yyyy") // Year: 2021
+  }
+
+  // Add this function after the convertDateFormat function
+  // const safeFormatDate = (dateString: string, formatString: string) => {
+  //   try {
+  //     const date = new Date(dateString)
+
+  //     // Check if date is valid
+  //     if (isNaN(date.getTime())) {
+  //       return "Invalid date"
+  //     }
+
+  //     return format(date, formatString)
+  //   } catch (error) {
+  //     console.error("Error formatting date:", error)
+  //     return "Invalid date"
+  //   }
+  // }
   // Fetch holidays data
   async function fetchData() {
     const { data: company } = await supabase
       .from("companies")
       .select("holidays, date_format")
       .eq("store_admin", currentUser?.email)
-      .single();
+      .single()
 
     if (company) {
-      setData(company.holidays || []);
-      setDateFormat(company.date_format || "MM/DD/YYYY");
+      setData(company.holidays || [])
+      setDateFormat(company.date_format || "MM/DD/YYYY")
     }
-    setLoading(false);
+    setLoading(false)
   }
 
   // Handle table sorting
-  const handleSortColumn = (sortColumn: string, sortType?: 'asc' | 'desc') => {
+  const handleSortColumn = (sortColumn: string, sortType?: "asc" | "desc") => {
     setTimeout(() => {
-      setSortColumn(sortColumn);
-      setSortType(sortType);
-    });
-  };
+      setSortColumn(sortColumn)
+      setSortType(sortType)
+    })
+  }
 
   useEffect(() => {
     if (currentUser?.email) {
-      fetchData();
+      fetchData()
     }
-  }, [currentUser]);
+  }, [currentUser])
 
   // Create new holiday
-  async function handleCreate(newData: Holiday) {
-    if (!newData.name || !newData.startDate || !newData.endDate) return;
+  async function handleCreate(newData: any) {
+    console.log(newData)
 
-    // Parse dates using the appropriate format
-    const antdFormat = dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY";
-    const startDate = dayjs(newData.startDate, antdFormat);
-    const endDate = dayjs(newData.endDate, antdFormat);
-    
-    if (!startDate.isValid() || !endDate.isValid()) {
-      alert('Please enter valid dates');
-      return;
+    if (newData.name && newData.startDate && newData.endDate) {
+      const randomId = () => Math.random().toString(36).substring(2, 9)
+
+      // Ensure all holidays have a unique ID
+      const updatedData = {
+        ...newData,
+        id: newData.id || randomId(),
+        startDate: new Date(newData.startDate).toString(),
+        endDate: new Date(newData.endDate).toString(),
+      }
+
+      // Generate unique IDs for all holidays if missing
+      const updatedHolidays = data.map((holiday: any) => ({
+        ...holiday,
+        id: holiday.id || randomId(),
+      }))
+
+      const datas = [...updatedHolidays, updatedData]
+      setData(datas)
+
+      await supabase.from("companies").update({ holidays: datas }).eq("store_admin", currentUser?.email).single()
+
+      setOpenEdit(false)
+      setDeleteOpen(false)
+      setOpenAdd(false)
+      setEditData(null)
+
+      // toast({
+      //   title: "Created",
+      //   description: "Holiday created successfully.",
+      // });
     }
-
-    if (endDate.isBefore(startDate)) {
-      alert('End date cannot be before start date');
-      return;
-    }
-
-    const randomId = () => Math.random().toString(36).substring(2, 9);
-
-    const updatedData: Holiday = {
-      ...newData,
-      id: newData.id || randomId(),
-      // Store dates in the database format
-      startDate: startDate.format(dateFormat),
-      endDate: endDate.format(dateFormat),
-    };
-
-    const updatedHolidays = data.map(holiday => ({
-      ...holiday,
-      id: holiday.id || randomId(),
-    }));
-
-    const datas = [...updatedHolidays, updatedData];
-    setData(datas);
-
-    await supabase
-      .from("companies")
-      .update({ holidays: datas })
-      .eq("store_admin", currentUser?.email)
-      .single();
-
-    setOpenAdd(false);
-    setEditData(null);
   }
 
   // Update existing holiday
-  const handleUpdate = async (newData: Holiday) => {
-    if (!newData.name || !newData.startDate || !newData.endDate) return;
-
-    // Parse dates using the appropriate format
-    const antdFormat = dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY";
-    const startDate = dayjs(newData.startDate, antdFormat);
-    const endDate = dayjs(newData.endDate, antdFormat);
-    
-    if (!startDate.isValid() || !endDate.isValid()) {
-      alert('Please enter valid dates');
-      return;
+  const handleUpdate = async (newData: any) => {
+    const filteredData = data.filter((item: any) => item.id !== oldEditData?.id)
+    if (newData.name && newData.startDate && newData.endDate) {
+      setData([...filteredData, newData])
+      const datas = [...filteredData, newData]
+      await supabase.from("companies").update({ holidays: datas }).eq("store_admin", currentUser?.email).single()
+      setOpenEdit(false)
+      setDeleteOpen(false)
+      setOpenAdd(false)
+      // toast({
+      //   title: "Updated",
+      //   description: "Holiday updated successfully.",
+      // });
     }
-
-    if (endDate.isBefore(startDate)) {
-      alert('End date cannot be before start date');
-      return;
-    }
-
-    const filteredData = data.filter(item => item.id !== oldEditData?.id);
-    const formattedData: Holiday = {
-      ...newData,
-      // Store dates in the database format
-      startDate: startDate.format(dateFormat),
-      endDate: endDate.format(dateFormat),
-    };
-
-    const datas = [...filteredData, formattedData];
-    setData(datas);
-
-    await supabase
-      .from("companies")
-      .update({ holidays: datas })
-      .eq("store_admin", currentUser?.email)
-      .single();
-
-    setOpenEdit(false);
-    setEditData(null);
-  };
-
+  }
   // Delete holiday
   const handleDelete = async () => {
-    if (!selectedId) return;
-    const filteredData = data.filter(item => item.id !== selectedId);
+    if (!selectedId) return
+    const filteredData = data.filter((item) => item.id !== selectedId)
 
-    await supabase
-      .from("companies")
-      .update({ holidays: filteredData })
-      .eq("store_admin", currentUser?.email)
-      .single();
+    await supabase.from("companies").update({ holidays: filteredData }).eq("store_admin", currentUser?.email).single()
 
-    setData(filteredData);
-    setDeleteOpen(false);
-    setSelectedId(null);
-  };
+    setData(filteredData)
+    setDeleteOpen(false)
+    setSelectedId(null)
+  }
 
   // Sort data for table
-  const getSortedData = () => {
-    if (!sortColumn || !sortType) return data;
-
-    return [...data].sort((a, b) => {
-      const x = a[sortColumn as keyof Holiday];
-      const y = b[sortColumn as keyof Holiday];
-      
-      if (typeof x === 'string' && typeof y === 'string') {
-        return sortType === 'asc' ? x.localeCompare(y) : y.localeCompare(x);
-      }
-      return 0;
-    });
-  };
+  const getData = () => {
+    if (sortColumn && sortType) {
+      return data.sort((a, b) => {
+        const x = a[sortColumn]
+        const y = b[sortColumn]
+        if (typeof x === "string" && typeof y === "string") {
+          return sortType === "asc"
+            ? (x as string).localeCompare(y as string)
+            : (y as string).localeCompare(x as string)
+        }
+        if (typeof x === "number" && typeof y === "number") {
+          return sortType === "asc" ? x - y : y - x
+        }
+        return 0
+      })
+    }
+    return data
+  }
 
   // Initialize edit form
-  const handleEdit = (data: Holiday) => {
-    setOldEditData(data);
-    // Convert dates from database format to Ant Design format for editing
-    const antdFormat = dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY";
-    const startDate = dayjs(data.startDate, dateFormat);
-    const endDate = dayjs(data.endDate, dateFormat);
-    
-    setEditData({
-      ...data,
-      startDate: startDate.isValid() ? startDate.format(antdFormat) : data.startDate,
-      endDate: endDate.isValid() ? endDate.format(antdFormat) : data.endDate
-    });
-    setOpenEdit(true);
-  };
+  function handleEdit(data: any) {
+    setOldEditData(data)
+    setEditData(data)
+    setOpenEdit(true)
+  }
 
   // Initialize add form
   const AddHoliday = () => {
+    setOldEditData({
+      name: null,
+    })
     setEditData({
-      id: '',
-      name: '',
-      startDate: '',
-      endDate: ''
-    });
-    setOpenAdd(true);
-  };
+      name: null,
+    })
+    setOpenAdd(true)
+  }
 
   return (
     <div className="">
@@ -238,31 +213,25 @@ const Holidays = () => {
             </button>
           </SheetTrigger>
         </div>
-        
+
         <SheetContent className="bg-white border-border_color" style={{ maxWidth: "460px" }}>
           <SheetHeader className="relative h-full">
-            <SheetTitle className="text-gray-600 text-sm -mt-1 uppercase">
-              Add new Holiday
-            </SheetTitle>
+            <SheetTitle className="text-gray-600 text-sm -mt-1 uppercase">Add new Holiday</SheetTitle>
             <SheetDescription>
               <div className="flex flex-col gap-2">
                 <div className="flex flex-col gap-1 py-2">
-                  <label className="text-gray-800 text-xs font-medium">
-                    Reason
-                  </label>
+                  <label className="text-gray-800 text-xs font-medium">Reason</label>
                   <input
                     type="text"
                     className="border border-border_color w-full rounded-[12px] px-4 h-10 pr-5 text-xs bg-gray-50"
-                    value={editData?.name || ''}
+                    value={editData?.name || ""}
                     onChange={(e) => setEditData({ ...editData!, name: e.target.value })}
                   />
                 </div>
                 <div className="flex items-center gap-6 mt-3 w-full">
                   <div className="w-1/2">
-                    <label className="text-gray-800 text-xs font-medium">
-                      Start Date
-                    </label>
-                    <DatePicker
+                    <label className="text-gray-800 text-xs font-medium">Start Date</label>
+                    {/* <DatePicker
                       format={dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY"}
                       value={editData?.startDate ? dayjs(editData.startDate, dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY") : null}
                       onChange={(date) => {
@@ -272,13 +241,21 @@ const Holidays = () => {
                         });
                       }}
                       className="w-full"
+                    /> */}
+                    <DatePickerComponent
+                      value={editData?.startDate}
+                      onChange={(e) => {
+                        setEditData({
+                          ...editData,
+                          startDate: e?.toString(),
+                        })
+                      }}
+                      className="border border-border_color w-full rounded-[12px] px-4 h-10 pr-5 text-xs bg-gray-50"
                     />
                   </div>
                   <div className="w-1/2">
-                    <label className="text-gray-800 text-xs font-medium">
-                      End Date
-                    </label>
-                    <DatePicker
+                    <label className="text-gray-800 text-xs font-medium">End Date</label>
+                    {/* <DatePicker
                       format={dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY"}
                       value={editData?.endDate ? dayjs(editData.endDate, dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY") : null}
                       onChange={(date) => {
@@ -288,6 +265,16 @@ const Holidays = () => {
                         });
                       }}
                       className="w-full"
+                    /> */}
+                    <DatePickerComponent
+                      value={editData?.endDate}
+                      onChange={(e) => {
+                        setEditData({
+                          ...editData,
+                          endDate: e?.toString(),
+                        })
+                      }}
+                      className="border border-border_color w-full rounded-[12px] px-4 h-10 pr-5 text-xs bg-gray-50"
                     />
                   </div>
                 </div>
@@ -313,7 +300,7 @@ const Holidays = () => {
 
       <div className="w-full border border-border_color rounded-[8px] bg-white text-sm my-2">
         <Table
-          data={getSortedData()}
+          data={getData()}
           loading={loading}
           sortColumn={sortColumn}
           sortType={sortType}
@@ -322,7 +309,10 @@ const Holidays = () => {
           autoHeight
         >
           <Column width={300} sortable>
-            <HeaderCell className="uppercase select-none text-left font-bold" style={{ backgroundColor: "#f2f2f2", paddingLeft: "50px" }}>
+            <HeaderCell
+              className="uppercase select-none text-left font-bold"
+              style={{ backgroundColor: "#f2f2f2", paddingLeft: "50px" }}
+            >
               Reason
             </HeaderCell>
             <Cell className="text-left pl-10" dataKey="name" />
@@ -333,9 +323,18 @@ const Holidays = () => {
               Start Date
             </HeaderCell>
             <Cell>
-              {(rowData: Holiday) => {
-                const date = dayjs(rowData.startDate, dateFormat);
-                return date.isValid() ? date.format(dateFormat) : rowData.startDate;
+              {(rowData) => {
+                try {
+                  const date = new Date(rowData.startDate)
+                  // Check if date is valid
+                  if (isNaN(date.getTime())) {
+                    return "Invalid date"
+                  }
+                  return format(date, convertDateFormat(dateFormat))
+                } catch (error) {
+                  console.error("Error formatting date:", error)
+                  return "Invalid date"
+                }
               }}
             </Cell>
           </Column>
@@ -345,9 +344,18 @@ const Holidays = () => {
               End Date
             </HeaderCell>
             <Cell>
-              {(rowData: Holiday) => {
-                const date = dayjs(rowData.endDate, dateFormat);
-                return date.isValid() ? date.format(dateFormat) : rowData.endDate;
+              {(rowData) => {
+                try {
+                  const date = new Date(rowData.endDate)
+                  // Check if date is valid
+                  if (isNaN(date.getTime())) {
+                    return "Invalid date"
+                  }
+                  return format(date, convertDateFormat(dateFormat))
+                } catch (error) {
+                  console.error("Error formatting date:", error)
+                  return "Invalid date"
+                }
               }}
             </Cell>
           </Column>
@@ -358,7 +366,7 @@ const Holidays = () => {
             </HeaderCell>
 
             <Cell style={{ padding: "6px" }} className="text-left flex align-middle">
-              {(rowData: Holiday) => (
+              {(rowData: any) => (
                 <div className="flex justify-evenly align-middle items-center h-full text-gray-600">
                   <Sheet open={openEdit} onOpenChange={setOpenEdit}>
                     <SheetTrigger>
@@ -372,53 +380,43 @@ const Holidays = () => {
                     </SheetTrigger>
                     <SheetContent className="bg-white border-border_color" style={{ maxWidth: "460px" }}>
                       <SheetHeader className="relative h-full">
-                        <SheetTitle className="text-gray-600 text-sm -mt-1 uppercase">
-                          Edit Holiday
-                        </SheetTitle>
+                        <SheetTitle className="text-gray-600 text-sm -mt-1 uppercase">Edit Holiday</SheetTitle>
                         <SheetDescription>
                           <div className="flex flex-col gap-2">
                             <div>
-                              <label className="text-gray-800 text-xs">
-                                Description
-                              </label>
+                              <label className="text-gray-800 text-xs">Description</label>
                               <input
                                 type="text"
                                 className="border border-border_color w-full rounded-[12px] px-4 h-10 pr-5 text-xs bg-gray-50"
-                                value={editData?.name || ''}
+                                value={editData?.name || ""}
                                 onChange={(e) => setEditData({ ...editData!, name: e.target.value })}
                               />
                             </div>
                             <div className="flex items-center gap-6 mt-3 w-full">
                               <div className="w-1/2">
-                                <label className="text-gray-800 text-xs font-medium">
-                                  Start Date
-                                </label>
-                                <DatePicker
-                                  format={dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY"}
-                                  value={editData?.startDate ? dayjs(editData.startDate, dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY") : null}
-                                  onChange={(date) => {
-                                    setEditData({ 
-                                      ...editData!, 
-                                      startDate: date ? date.format(dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY") : '' 
-                                    });
+                                <label className="text-gray-800 text-xs font-medium">Start Date</label>
+                                <DatePickerComponent
+                                  value={editData?.startDate}
+                                  onChange={(e) => {
+                                    setEditData({
+                                      ...editData,
+                                      startDate: e?.toString(),
+                                    })
                                   }}
-                                  className="w-full"
+                                  className="border border-border_color w-full rounded-[12px] px-4 h-10 pr-5 text-xs bg-gray-50"
                                 />
                               </div>
                               <div className="w-1/2">
-                                <label className="text-gray-800 text-xs font-medium">
-                                  End Date
-                                </label>
-                                <DatePicker
-                                  format={dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY"}
-                                  value={editData?.endDate ? dayjs(editData.endDate, dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY") : null}
-                                  onChange={(date) => {
-                                    setEditData({ 
-                                      ...editData!, 
-                                      endDate: date ? date.format(dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY") : '' 
-                                    });
+                                <label className="text-gray-800 text-xs font-medium">End Date</label>
+                                <DatePickerComponent
+                                  value={editData?.endDate}
+                                  onChange={(e) => {
+                                    setEditData({
+                                      ...editData,
+                                      endDate: e?.toString(),
+                                    })
                                   }}
-                                  className="w-full"
+                                  className="border border-border_color w-full rounded-[12px] px-4 h-10 pr-5 text-xs bg-gray-50"
                                 />
                               </div>
                             </div>
@@ -453,9 +451,7 @@ const Holidays = () => {
                     <DialogContent className="w-[350px] rounded-lg">
                       <DialogHeader>
                         <DialogTitle>Delete</DialogTitle>
-                        <DialogDescription>
-                          Are you sure you want to delete this holiday?
-                        </DialogDescription>
+                        <DialogDescription>Are you sure you want to delete this holiday?</DialogDescription>
                       </DialogHeader>
                       <div className="flex justify-start gap-3">
                         <Button
@@ -466,7 +462,7 @@ const Holidays = () => {
                         </Button>
                         <Button
                           onClick={handleDelete}
-                          className="flex items-center hover:text-white hover:bg-primary-700 bg-primary-700 text-white w-1/2"
+                          className="flex items-center hover:text-white hover:bg-teal-700 bg-teal-700 text-white w-1/2"
                         >
                           <span className="ml-1">Delete</span>
                         </Button>
@@ -480,7 +476,7 @@ const Holidays = () => {
         </Table>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Holidays;
+export default Holidays

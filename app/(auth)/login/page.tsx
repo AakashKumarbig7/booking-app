@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {  useState } from "react";
 import { SubmitButton } from "./submit-button";
 import Link from "next/link";
-import Image from "next/image";
 import { Eye, EyeOff } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import {  useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { toaster, Message } from "rsuite";
 
@@ -15,16 +14,16 @@ export default function Login() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const router = useRouter();
+  
+  // const router = useRouter();
   const searchParams = useSearchParams();
   const message = searchParams.get("message");
 
-  const fetchLogo = async () => {
-    const { data, error } = await supabase.from("app_settings").select("logo").single();
-    if (error) return null;
-    return data?.logo || null;
-  };
+  // const fetchLogo = async () => {
+  //   const { data, error } = await supabase.from("app_settings").select("logo").single();
+  //   if (error) return null;
+  //   return data?.logo || null;
+  // };
 
   // useEffect(() => {
   //   const fetchLogoUrl = async () => {
@@ -81,25 +80,25 @@ console.log("working");
     };
 
     setLoading(true);
-    fetchData();
-    // const response = await fetch("/auth/login", {
-    //   method: "POST",
-    //   body: formData,
-    // });
+    // fetchData();
+    const response = await fetch("/auth/login", {
+      method: "POST",
+      body: formData,
+    });
 
-    // if (!response.ok) {
-    //   const data = await response.json();
-    //   setLoading(false);
-    //   toaster.push(
-    //     <Message showIcon type={"error"}>
-    //       <strong>{data.error}!</strong>
-    //     </Message>,
-    //     { placement: "topEnd", duration: 3000 }
-    //   );
-    // } else {
-    //   setErrorMessage("");
-    //   fetchData();
-    // }
+    if (!response.ok) {
+      const data = await response.json();
+      setLoading(false);
+      toaster.push(
+        <Message showIcon type={"error"}>
+          <strong>{data.error}!</strong>
+        </Message>,
+        { placement: "topEnd", duration: 3000 }
+      );
+    } else {
+      setErrorMessage("");
+      fetchData();
+    }
   };
 
   return (
