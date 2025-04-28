@@ -4,27 +4,15 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from "@/components/ui/select"
 import { TimePicker } from "antd"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-
 import { createClient } from "@/utils/supabase/client"
 import { useEffect, useState } from "react"
 import dayjs from "dayjs"
-import { FilePlus } from "lucide-react"
-import DatePickerComponent from "@/components/datePicker"
 import Holidays from "@/components/holiday"
 type Day = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday"
 
 const Organisation = () => {
   const supabase = createClient()
   const [timezone, setTimezone] = useState("(+11:00) Australian Eastern Daylight Time (Australia/Melbourne)")
-  const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>()
   const [companyName, setCompanyName] = useState("")
   const [previousName, setPreviousName] = useState("")
@@ -46,8 +34,6 @@ const Organisation = () => {
     "Sunday",
   ])
   const [data, setData] = useState<any[]>()
-  const[holidayData,setHolidayData]=useState<any[]>()
-  const [openAdd, setOpenAdd] = useState(false);
   const [workingTime, setWorkingTime] = useState<
     Record<Day, { status: boolean; from: string; to: string; day: string }>
   >({
@@ -69,19 +55,13 @@ const Organisation = () => {
     },
     Sunday: { status: false, from: "9:00 AM", to: "7:00 PM", day: "Sunday" },
   })
-  const [editData, setEditData] = useState<any>();
-  const [oldEditData, setOldEditData] = useState<any>();
-  const [deleteOpen, setDeleteOpen] = useState(false);
-    const [openEdit, setOpenEdit] = useState(false);
-  
-    const [selectedId, setSelectedId] = useState<string | null>(null);
   function getSortedDays(startDay: Day) {
     const startIndex = companyDays.indexOf(startDay)
     return [...companyDays.slice(startIndex), ...companyDays.slice(0, startIndex)]
   }
   useEffect(() => {
     // Initial data fetch
-    fetchData().then(() => setLoading(false))
+    fetchData();
 
     // Realtime: Listen to both tables
     const usersChannel = supabase
