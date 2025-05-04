@@ -13,6 +13,39 @@ import dayjs from "dayjs"
 import { useGlobalContext } from "@/context/store"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
+import BadmintonIcon, { getSportIcon } from "@/components/sport-icons"
+import toast from "react-hot-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
+interface CourtSettings {
+  peakHours: {
+    start: string | null
+    end: string | null
+  }
+  nonPeakHours: {
+    start: string | null
+    end: string | null
+  }
+  fees: {
+    regular: number
+    peak: number
+  }
+  availability: boolean
+}
+
+interface CourtsData {
+  [courtName: string]: CourtSettings
+}
 
 interface SportData {
   id: number
@@ -41,24 +74,19 @@ interface SportData {
     regular: number
     peak: number
   }
-  court_availability?: Array<{ name: string; availability: boolean }>
+  courtsData?: CourtsData
   available_court_count?: number
 }
-
-interface CourtData {
-  name: string
-  timing: {
-    start: string
-    end: string
-  }
-  peakHours: {
-    start: string
-    end: string
-  }
-  fee: number
-  peakFee: number
-  availability: boolean
-}
+const notify = (message: string, success: boolean) =>
+  toast[success ? "success" : "error"](message, {
+    style: {
+      borderRadius: "10px",
+      background: "#fff",
+      color: "#000",
+    },
+    position: "top-right",
+    duration: 3000,
+  })
 
 export default function SportsManagementPage() {
   const router = useRouter()
@@ -95,6 +123,8 @@ export default function SportsManagementPage() {
     },
   })
 
+  const [sportIdToDelete, setSportIdToDelete] = useState<number | null>(null)
+
   useEffect(() => {
     fetchSportsData()
   }, [currentUser])
@@ -122,7 +152,7 @@ export default function SportsManagementPage() {
           sportName: item.sport_name,
           courts: item.courts || [],
           availability: item.availability,
-          platform_count: item.platform_count || 0,
+          platform_count: item.courts?.length || 0,
           timing: item.timing || { start: null, end: null },
           days: item.days || {
             Mon: false,
@@ -137,8 +167,8 @@ export default function SportsManagementPage() {
           nonPeakHours: item.nonPeakHours || { start: null, end: null },
           peakHours: item.peakHours || { start: null, end: null },
           fees: item.fees || { regular: 0, peak: 0 },
-          court_availability: item.court_availability || [],
-          available_court_count: item.available_court_count || item.platform_count || 0,
+          courtsData: item.courtsData || {},
+          available_court_count: getAvailableCourtCount(item),
         }))
 
         setSportData(transformedData)
@@ -148,6 +178,18 @@ export default function SportsManagementPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const getAvailableCourtCount = (sport: any): number => {
+    if (!sport.availability) return 0
+
+    // If we have courtsData, count available courts
+    if (sport.courtsData) {
+      return Object.values(sport.courtsData).filter((court: any) => court.availability).length
+    }
+
+    // Fallback to old logic
+    return sport.courts?.length || 0
   }
 
   const handleToggleAvailability = async (id: number, currentValue: boolean) => {
@@ -213,11 +255,41 @@ export default function SportsManagementPage() {
 
       const currentSportsData = data?.sports_management || []
 
-      const courts = []
-      const platformCount = Number.parseInt(formData.platformCount)
-      for (let i = 1; i <= platformCount; i++) {
-        courts.push(`${formData.platformName}`)
-      }
+      // Parse comma-separated court names
+      const courtNames = formData.platformName
+        .split(",")
+        .map((name) => name.trim())
+        .filter((name) => name !== "")
+
+      // Create courts data structure
+      const courtsData: CourtsData = {}
+
+      // Initialize each court with the same settings
+      courtNames.forEach((courtName) => {
+        courtsData[courtName] = {
+          peakHours: {
+            start: formData.peakStartTime
+              ? dayjs(formData.peakStartTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+              : null,
+            end: formData.peakEndTime
+              ? dayjs(formData.peakEndTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+              : null,
+          },
+          nonPeakHours: {
+            start: formData.nonPeakStartTime
+              ? dayjs(formData.nonPeakStartTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+              : null,
+            end: formData.nonPeakEndTime
+              ? dayjs(formData.nonPeakEndTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+              : null,
+          },
+          fees: {
+            regular: Number.parseFloat(formData.regularFee) || 0,
+            peak: Number.parseFloat(formData.peakFee) || 0,
+          },
+          availability: true,
+        }
+      })
 
       const newId = currentSportsData.length > 0 ? Math.max(...currentSportsData.map((s: any) => s.id)) + 1 : 1
 
@@ -225,27 +297,38 @@ export default function SportsManagementPage() {
         id: newId,
         icon: formData.icon,
         sport_name: formData.sportName,
-        courts: courts,
+        courts: courtNames,
         availability: true,
         status: formData.sportStatus,
         timing: {
-          start: formData.startTime ? dayjs(formData.startTime).format("HH:mm") : null,
-          end: formData.endTime ? dayjs(formData.endTime).format("HH:mm") : null,
+          start: formData.startTime
+            ? dayjs(formData.startTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+            : null,
+          end: formData.endTime ? dayjs(formData.endTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm") : null,
         },
         nonPeakHours: {
-          start: formData.nonPeakStartTime ? dayjs(formData.nonPeakStartTime).format("HH:mm") : null,
-          end: formData.nonPeakEndTime ? dayjs(formData.nonPeakEndTime).format("HH:mm") : null,
+          start: formData.nonPeakStartTime
+            ? dayjs(formData.nonPeakStartTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+            : null,
+          end: formData.nonPeakEndTime
+            ? dayjs(formData.nonPeakEndTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+            : null,
         },
         peakHours: {
-          start: formData.peakStartTime ? dayjs(formData.peakStartTime).format("HH:mm") : null,
-          end: formData.peakEndTime ? dayjs(formData.peakEndTime).format("HH:mm") : null,
+          start: formData.peakStartTime
+            ? dayjs(formData.peakStartTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+            : null,
+          end: formData.peakEndTime
+            ? dayjs(formData.peakEndTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+            : null,
         },
         days: formData.days,
-        platform_count: platformCount,
+        platform_count: courtNames.length,
         fees: {
           regular: Number.parseFloat(formData.regularFee) || 0,
           peak: Number.parseFloat(formData.peakFee) || 0,
         },
+        courtsData: courtsData,
       }
 
       const updatedSportsData = [...currentSportsData, newSport]
@@ -283,7 +366,7 @@ export default function SportsManagementPage() {
           Sun: false,
         },
       })
-
+      notify("Sport added successfully", true)
       setOpenAdd(false)
       fetchSportsData()
     } catch (error) {
@@ -318,7 +401,7 @@ export default function SportsManagementPage() {
           sports_management: updatedSportsData,
         })
         .eq("store_admin", currentUser?.email)
-
+      notify("Sport deleted successfully", true)
       if (error) throw error
 
       fetchSportsData()
@@ -333,11 +416,24 @@ export default function SportsManagementPage() {
 
   const getAvailablePlatforms = (sport: SportData) => {
     if (!sport.availability) return 0
+
+    // If we have courtsData, count available courts
+    if (sport.courtsData) {
+      return Object.values(sport.courtsData).filter((court) => court.availability).length
+    }
+
     return sport.available_court_count || sport.platform_count
   }
 
   const getUnavailablePlatforms = (sport: SportData) => {
     if (!sport.availability) return sport.platform_count
+
+    // If we have courtsData, count unavailable courts
+    if (sport.courtsData) {
+      const availableCount = Object.values(sport.courtsData).filter((court) => court.availability).length
+      return sport.courts.length - availableCount
+    }
+
     return sport.platform_count - (sport.available_court_count || sport.platform_count)
   }
 
@@ -363,13 +459,13 @@ export default function SportsManagementPage() {
               <div className="w-full space-y-4 pt-4 pb-20">
                 <div className="flex gap-4">
                   <div className="w-full space-y-2">
-                    <Label>Sport Name</Label>
+                    <Label className="text-gray-900 text-sm font-medium">Sport Name</Label>
                     <Select value={formData.sportName} onValueChange={(value) => handleInputChange("sportName", value)}>
                       <SelectTrigger className="w-full border border-zinc-300 bg-gray-50 text-sm pt-0.5 text-gray-700">
                         <SelectValue placeholder="Badminton / Tennis / Cricket..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Badminton">Badminton</SelectItem>
+                        <SelectItem value="Badminton">Badminton </SelectItem>
                         <SelectItem value="Tennis">Tennis</SelectItem>
                         <SelectItem value="Cricket">Cricket</SelectItem>
                         <SelectItem value="GYM">GYM</SelectItem>
@@ -379,23 +475,48 @@ export default function SportsManagementPage() {
                   </div>
 
                   <div className="w-full space-y-2">
-                    <Label>Icon</Label>
+                    <Label className="text-gray-900 text-sm font-medium">Icon</Label>
                     <Select value={formData.icon} onValueChange={(value) => handleInputChange("icon", value)}>
                       <SelectTrigger className="w-full border border-zinc-300 bg-gray-50 text-sm text-gray-700">
                         <SelectValue placeholder="Choose icon" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="🏸">🏸 Badminton</SelectItem>
-                        <SelectItem value="🎾">🎾 Tennis</SelectItem>
-                        <SelectItem value="🏏">🏏 Cricket</SelectItem>
-                        <SelectItem value="🏋️">🏋️ GYM</SelectItem>
-                        <SelectItem value="🧘">🧘 Yoga</SelectItem>
+                      <SelectContent className="align-middle">
+                        <SelectItem value="badminton">
+                          <div className="flex items-center gap-2">
+                            <BadmintonIcon />
+                            {/* <span>Badminton</span> */}
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="tennis">
+                          <div className="flex items-center gap-2">
+                            {getSportIcon("tennis")}
+                            {/* <span>Tennis</span> */}
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="cricket">
+                          <div className="flex items-center gap-2">
+                            {getSportIcon("cricket")}
+                            {/* <span>Cricket</span> */}
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="gym">
+                          <div className="flex items-center gap-2">
+                            {getSportIcon("gym")}
+                            {/* <span>GYM</span> */}
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="yoga">
+                          <div className="flex items-center gap-2">
+                            {getSportIcon("yoga")}
+                            {/* <span>Yoga</span> */}
+                          </div>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="w-full space-y-2">
-                    <Label>Sport Status</Label>
+                    <Label className="text-gray-900 text-sm font-medium">Sport Status</Label>
                     <Select
                       value={formData.sportStatus}
                       onValueChange={(value) => handleInputChange("sportStatus", value)}
@@ -413,38 +534,27 @@ export default function SportsManagementPage() {
 
                 <div className="flex gap-4">
                   <div className="w-full space-y-2">
-                    <Label>Platform Name</Label>
+                    <Label className="text-gray-900 text-sm font-medium">Platform Names </Label>
                     <input
                       type="text"
-                      placeholder="Court, Turf, Class, Room"
+                      placeholder="courtA,courtB,courtC"
                       className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
                       value={formData.platformName}
                       onChange={(e) => handleInputChange("platformName", e.target.value)}
                     />
-                  </div>
-
-                  <div className="w-full space-y-2">
-                    <Label>No. of Platform</Label>
-                    <input
-                      type="number"
-                      placeholder="20"
-                      className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
-                      value={formData.platformCount}
-                      onChange={(e) => handleInputChange("platformCount", e.target.value)}
-                      min={1}
-                    />
+                    {/* <p className="text-xs text-gray-500">Enter court names separated by commas (e.g., courtA,courtB)</p> */}
                   </div>
                 </div>
 
                 <div className="w-full space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Platform Timing</Label>
+                  <Label className="text-gray-900 text-sm font-medium">Platform Timing</Label>
                   <div className="flex items-center gap-4">
                     <div className="w-full space-y-1.5">
                       <Label className="text-sm text-gray-600">From</Label>
                       <TimePicker
                         value={formData.startTime}
                         use12Hours={timeFormat === "12 hours"}
-                        format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
+                        format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm "}
                         className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                         onChange={(time) => handleInputChange("startTime", time)}
                         needConfirm={false}
@@ -452,20 +562,21 @@ export default function SportsManagementPage() {
                     </div>
 
                     <div className="w-full space-y-1.5">
-                      <Label className="text-sm text-gray-600">To</Label>
+                      <Label className="text-gray-900 text-sm font-medium">To</Label>
                       <TimePicker
                         value={formData.endTime}
                         use12Hours={timeFormat === "12 hours"}
                         format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
                         className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                         onChange={(time) => handleInputChange("endTime", time)}
+                        needConfirm={false}
                       />
                     </div>
                   </div>
                 </div>
 
                 <div className="w-full space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Non-Peak Hour Timing</Label>
+                  <Label className="text-gray-900 text-sm font-medium">Non-Peak Hour Timing</Label>
                   <div className="flex items-center gap-4">
                     <div className="w-full space-y-1.5">
                       <Label className="text-sm text-gray-600">From</Label>
@@ -479,7 +590,7 @@ export default function SportsManagementPage() {
                     </div>
 
                     <div className="w-full space-y-1.5">
-                      <Label className="text-sm text-gray-600">To</Label>
+                      <Label className="text-gray-900 text-sm font-medium">To</Label>
                       <TimePicker
                         value={formData.nonPeakEndTime}
                         use12Hours={timeFormat === "12 hours"}
@@ -492,10 +603,10 @@ export default function SportsManagementPage() {
                 </div>
 
                 <div className="w-full space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Peak Hours</Label>
+                  <Label className="text-gray-900 text-sm font-medium">Peak Hours</Label>
                   <div className="flex items-center gap-4">
                     <div className="w-full space-y-1.5">
-                      <Label className="text-sm text-gray-600">From</Label>
+                      <Label className="text-gray-900 text-sm font-medium">From</Label>
                       <TimePicker
                         value={formData.peakStartTime}
                         use12Hours={timeFormat === "12 hours"}
@@ -506,7 +617,7 @@ export default function SportsManagementPage() {
                     </div>
 
                     <div className="w-full space-y-1.5">
-                      <Label className="text-sm text-gray-600">To</Label>
+                      <Label className="text-gray-900 text-sm font-medium">To</Label>
                       <TimePicker
                         value={formData.peakEndTime}
                         use12Hours={timeFormat === "12 hours"}
@@ -520,7 +631,7 @@ export default function SportsManagementPage() {
 
                 <div className="flex gap-4">
                   <div className="w-full space-y-2">
-                    <Label>Regular Fee</Label>
+                    <Label className="text-gray-900 text-sm font-medium">Regular Fee</Label>
                     <input
                       type="number"
                       placeholder="12.99"
@@ -528,12 +639,11 @@ export default function SportsManagementPage() {
                       value={formData.regularFee}
                       onChange={(e) => handleInputChange("regularFee", e.target.value)}
                       min={0}
-                     
                     />
                   </div>
 
                   <div className="w-full space-y-2">
-                    <Label>Peak Fee</Label>
+                    <Label className="text-gray-900 text-sm font-medium">Peak Fee</Label>
                     <input
                       type="number"
                       placeholder="15.99"
@@ -541,13 +651,12 @@ export default function SportsManagementPage() {
                       value={formData.peakFee}
                       onChange={(e) => handleInputChange("peakFee", e.target.value)}
                       min={0}
-                     
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label>Active Days</Label>
+                  <Label className="text-gray-900 text-sm font-medium">Active Days</Label>
                   <div className="flex gap-4 flex-wrap pt-2">
                     {Object.keys(formData.days).map((day) => (
                       <label key={day} className="flex items-center gap-1 text-sm text-gray-700">
@@ -600,7 +709,7 @@ export default function SportsManagementPage() {
             <Cell>
               {(rowData: RowDataType) => (
                 <div className="flex justify-center" style={getRowStyle((rowData as SportData).availability)}>
-                  {rowData.icon}
+                  {getSportIcon(rowData.icon)}
                 </div>
               )}
             </Cell>
@@ -678,11 +787,37 @@ export default function SportsManagementPage() {
                   >
                     <SquarePen size={16} />
                   </div>
-                  <Trash2
-                    size={16}
-                    className="hover:text-red-700 cursor-pointer"
-                    onClick={() => handleDelete((rowData as SportData).id)}
-                  />
+                  <AlertDialog
+                    open={sportIdToDelete === (rowData as SportData).id}
+                    onOpenChange={(open) => {
+                      if (!open) setSportIdToDelete(null)
+                    }}
+                  >
+                    <AlertDialogTrigger asChild>
+                      <Trash2
+                        size={16}
+                        className="hover:text-red-700 cursor-pointer"
+                        onClick={() => setSportIdToDelete((rowData as SportData).id)}
+                      />
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to delete this sport?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete the sport and all its data.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDelete((rowData as SportData).id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               )}
             </Cell>

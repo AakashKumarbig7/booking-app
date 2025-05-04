@@ -230,7 +230,7 @@ const Holidays = () => {
                 </div>
                 <div className="flex items-center gap-6 mt-3 w-full">
                   <div className="w-1/2">
-                    <label className="text-gray-800 text-xs font-medium">Start Date</label>
+                    <label className="text-gray-900 text-sm font-medium">Start Date</label>
                     {/* <DatePicker
                       format={dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY"}
                       value={editData?.startDate ? dayjs(editData.startDate, dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY") : null}
@@ -254,7 +254,7 @@ const Holidays = () => {
                     />
                   </div>
                   <div className="w-1/2">
-                    <label className="text-gray-800 text-xs font-medium">End Date</label>
+                    <label className="text-gray-900 text-sm font-medium">End Date</label>
                     {/* <DatePicker
                       format={dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY"}
                       value={editData?.endDate ? dayjs(editData.endDate, dateFormat === "dd/MMM/yyyy" ? "DD/MM/YYYY" : "MM/DD/YYYY") : null}
@@ -384,7 +384,7 @@ const Holidays = () => {
                         <SheetDescription>
                           <div className="flex flex-col gap-2">
                             <div>
-                              <label className="text-gray-800 text-xs">Description</label>
+                              <label className="text-gray-900 text-sm font-medium">Description</label>
                               <input
                                 type="text"
                                 className="border border-border_color w-full rounded-[12px] px-4 h-10 pr-5 text-xs bg-gray-50"
@@ -394,7 +394,7 @@ const Holidays = () => {
                             </div>
                             <div className="flex items-center gap-6 mt-3 w-full">
                               <div className="w-1/2">
-                                <label className="text-gray-800 text-xs font-medium">Start Date</label>
+                                <label className="text-gray-900 text-sm font-medium">Start Date</label>
                                 <DatePickerComponent
                                   value={editData?.startDate}
                                   onChange={(e) => {
@@ -407,7 +407,7 @@ const Holidays = () => {
                                 />
                               </div>
                               <div className="w-1/2">
-                                <label className="text-gray-800 text-xs font-medium">End Date</label>
+                                <label className="text-gray-900 text-sm font-medium">End Date</label>
                                 <DatePickerComponent
                                   value={editData?.endDate}
                                   onChange={(e) => {

@@ -8,10 +8,22 @@ import { createClient } from "@/utils/supabase/client"
 import { useEffect, useState } from "react"
 import dayjs from "dayjs"
 import Holidays from "@/components/holiday"
+import toast, { Toaster } from "react-hot-toast";
 type Day = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday"
+const notify = (message: string, success: boolean) =>
+  toast[success ? "success" : "error"](message, {
+    style: {
+      borderRadius: "10px",
+      background: "#fff",
+      color: "#000",
+    },
+    position: "top-right",
+    duration: 3000,
+  });
 
 const Organisation = () => {
   const supabase = createClient()
+  const [loading, setLoading] = useState(true);
   const [timezone, setTimezone] = useState("(+11:00) Australian Eastern Daylight Time (Australia/Melbourne)")
   const [user, setUser] = useState<any>()
   const [companyName, setCompanyName] = useState("")
@@ -61,7 +73,7 @@ const Organisation = () => {
   }
   useEffect(() => {
     // Initial data fetch
-    fetchData();
+    fetchData().then(() => setLoading(false));
 
     // Realtime: Listen to both tables
     const usersChannel = supabase
@@ -164,7 +176,7 @@ const Organisation = () => {
       })
       .eq("company_name", previousName)
       .single()
-
+      notify("Company details updated successfully", true)
     if (companyUpdateError) {
       console.log("Error updating companies table:", companyUpdateError)
     } else {
@@ -173,6 +185,7 @@ const Organisation = () => {
   }
     return (
     <div className="w-full bg-white p-4 ">
+         <Toaster />
       <div className="px-4 ">
         <div className=" items-center gap-2">
           <h1 className="text-xl font-bold text-zinc-950">Organisation</h1>
@@ -462,18 +475,19 @@ const Organisation = () => {
                     ))}
                   </div>
                 </div>
-                <div className="w-full flex justify-end border border-bgborder_color rounded-[6px] bg-white p-2 gap-2">
+                
+              </div>
+              <div className="w-full flex justify-end mt-7 border border-bgborder_color rounded-[6px] bg-white p-2 gap-2">
                   <button className="px-8 py-2 text-xs border border-gray-200 rounded-[6px] text-gray-800 ">
                     Cancel
                   </button>
                   <button
-                    className="px-8 py-2 text-xs border border-gray-200 rounded-[6px] bg-blue-700 text-white"
+                    className="px-8 py-2 text-xs border border-gray-200 rounded-[6px] bg-teal-800 text-white"
                     onClick={() => handleSave()}
                   >
                     Save
                   </button>
                 </div>
-              </div>
             </TabsContent>
             <TabsContent value="holiday" className="pt-3 text-sm text-zinc-700">
               <Holidays/>

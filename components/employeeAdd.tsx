@@ -1,6 +1,6 @@
 "use client"
 import { FilePlus } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/utils/supabase/client"
 
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import EmployeeForm from "./empForm"
 import EmployeeTable from "./empTable"
-
+import toast, { Toaster } from "react-hot-toast"
 
 interface Employee {
   employee_id?: string
@@ -38,6 +38,25 @@ interface Employee {
   zipcode: string
   emp_id?: string
 }
+
+// Define the validation interface
+interface FormValidation {
+  validateAllFields: () => boolean
+  errors: {
+    [key: string]: string
+  }
+}
+
+const notify = (message: string, success: boolean) =>
+  toast[success ? "success" : "error"](message, {
+    style: {
+      borderRadius: "10px",
+      background: "#fff",
+      color: "#000",
+    },
+    position: "top-right",
+    duration: 3000,
+  })
 
 const EmployeeAdd = () => {
   const supabase = createClient()
@@ -68,6 +87,9 @@ const EmployeeAdd = () => {
     emergency_mobile: "",
     emp_id: "",
   })
+
+  // Add a ref to access the form validation methods
+  const formRef = useRef<FormValidation | null>(null)
 
   // Fetch employees on component mount
   useEffect(() => {
@@ -129,19 +151,28 @@ const EmployeeAdd = () => {
   }
 
   const handleAddEmployee = async () => {
-    // Basic validation
-    if (!formData.email || !formData.first_name || !formData.last_name) {
-      console.error("Please fill in all required fields")
+    // Validate all fields before submission
+    if (formRef.current && !formRef.current.validateAllFields()) {
+      notify("Please fix the validation errors", false)
       return
     }
 
+    // Format mobile numbers by removing spaces for database
+    const formattedData = {
+      ...formData,
+      mobile: formData.mobile.replace(/\s+/g, ""),
+      emergency_mobile: formData.emergency_mobile.replace(/\s+/g, ""),
+    }
+
     // Insert new employee
-    const { data, error } = await supabase.from("users").insert([formData]).select()
+    const { data, error } = await supabase.from("users").insert([formattedData]).select()
 
     if (error) {
       console.error("Failed to add employee:", error.message)
+      notify("Failed to add employee: " + error.message, false)
     } else {
       console.log("Employee added successfully")
+      notify("Employee added successfully", true)
       setOpenAdd(false)
       resetForm()
       fetchData()
@@ -160,36 +191,51 @@ const EmployeeAdd = () => {
   }
 
   const handleEditEmployee = async () => {
-    console.log(selectedEmployee?.emp_id,"working")
+    console.log(selectedEmployee?.emp_id, "working")
     if (!selectedEmployee?.emp_id) return
+
+    // Validate all fields before submission
+    if (formRef.current && !formRef.current.validateAllFields()) {
+      notify("Please fix the validation errors", false)
+      return
+    }
+
+    // Format mobile numbers by removing spaces for database
+    const formattedData = {
+      ...formData,
+      mobile: formData.mobile.replace(/\s+/g, ""),
+      emergency_mobile: formData.emergency_mobile.replace(/\s+/g, ""),
+    }
 
     // Update employee
     const { error } = await supabase
       .from("users")
       .update({
-        employee_id: formData.employee_id,
-        password: formData.password,
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        email: formData.email,
-        mobile: formData.mobile,
-        joined_date: formData.joined_date,
-        designation: formData.designation,
-        blood_group: formData.blood_group,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        country: formData.country,
-        zipcode: formData.zipcode,
-        emergency_mobile: formData.emergency_mobile,
-        emp_id: formData.emp_id,
+        employee_id: formattedData.employee_id,
+        password: formattedData.password,
+        first_name: formattedData.first_name,
+        last_name: formattedData.last_name,
+        email: formattedData.email,
+        mobile: formattedData.mobile,
+        joined_date: formattedData.joined_date,
+        designation: formattedData.designation,
+        blood_group: formattedData.blood_group,
+        address: formattedData.address,
+        city: formattedData.city,
+        state: formattedData.state,
+        country: formattedData.country,
+        zipcode: formattedData.zipcode,
+        emergency_mobile: formattedData.emergency_mobile,
+        emp_id: formattedData.emp_id,
       })
       .eq("emp_id", selectedEmployee.emp_id)
 
     if (error) {
       console.error("Failed to update employee:", error.message)
+      notify("Failed to update employee: " + error.message, false)
     } else {
       console.log("Employee updated successfully")
+      notify("Employee updated successfully", true)
       setOpenEdit(false)
       resetForm()
       fetchData()
@@ -211,6 +257,8 @@ const EmployeeAdd = () => {
       console.error("Failed to delete employee:", error.message)
     } else {
       console.log("Employee deleted successfully")
+      notify("Employee deleted successfully", true)
+
       setOpenDelete(false)
       fetchData()
     }
@@ -227,6 +275,7 @@ const EmployeeAdd = () => {
       {/* Add Employee Sheet */}
       <Sheet open={openAdd} onOpenChange={setOpenAdd}>
         <div className="flex justify-end mb-4">
+          <Toaster />
           <SheetTrigger asChild>
             <div
               className="bg-teal-800 text-white rounded-[12px] w-[130px] h-[40px] flex items-center justify-center text-xs cursor-pointer"
@@ -242,14 +291,19 @@ const EmployeeAdd = () => {
             <SheetTitle className="text-gray-600 text-sm -mt-1 uppercase overflow-hidden">Add Employee</SheetTitle>
           </SheetHeader>
 
-          <EmployeeForm formData={formData} handleInputChange={handleInputChange} />
+          <EmployeeForm formData={formData} handleInputChange={handleInputChange} ref={formRef} />
 
           {/* Footer: Save & Cancel */}
           <div className="mt-3 pt-3 flex  gap-2 px-3 pb-2">
             <Button variant="outline" onClick={() => setOpenAdd(false)}>
               Cancel
             </Button>
-            <div  className="bg-teal-800 text-white rounded-[12px] w-[100px] h-[40px] flex items-center justify-center text-xs cursor-pointer"onClick={handleAddEmployee}>Save</div>
+            <div
+              className="bg-teal-800 text-white rounded-[12px] w-[100px] h-[40px] flex items-center justify-center text-xs cursor-pointer"
+              onClick={handleAddEmployee}
+            >
+              Save
+            </div>
           </div>
         </SheetContent>
       </Sheet>
@@ -261,16 +315,18 @@ const EmployeeAdd = () => {
             <SheetTitle className="text-gray-600 text-sm -mt-1 uppercase overflow-hidden">Edit Employee</SheetTitle>
           </SheetHeader>
 
-          <EmployeeForm formData={formData} handleInputChange={handleInputChange} isEdit={true} />
+          <EmployeeForm formData={formData} handleInputChange={handleInputChange} isEdit={true} ref={formRef} />
 
           {/* Footer: Save & Cancel */}
           <div className="mt-3 pt-3 flex  gap-2 px-3 pb-2">
-          <Button className="bg-teal-800" onClick={handleEditEmployee}>Update</Button>
-          
+            <Button className="bg-teal-800" onClick={handleEditEmployee}>
+              Update
+            </Button>
+
             <Button variant="outline" onClick={() => setOpenEdit(false)}>
               Cancel
             </Button>
-            </div>
+          </div>
         </SheetContent>
       </Sheet>
 
@@ -281,8 +337,7 @@ const EmployeeAdd = () => {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the employee
-              {selectedEmployee && ` ${selectedEmployee.first_name} ${selectedEmployee.last_name}`}
-              .
+              {selectedEmployee && ` ${selectedEmployee.first_name} ${selectedEmployee.last_name}`}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
