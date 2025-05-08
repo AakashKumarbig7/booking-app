@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -26,25 +28,41 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Input } from "@/components/ui/input"
 
 interface CourtSettings {
-  peakHours: {
+  peakHours: Array<{
     start: string | null
     end: string | null
-  }
+    fee: number
+  }>
   nonPeakHours: {
     start: string | null
     end: string | null
   }
   fees: {
     regular: number
-    peak: number
   }
   availability: boolean
 }
 
+// 1. Add thirdPeakHours to the SportData interface
 interface CourtsData {
-  [courtName: string]: CourtSettings
+  [courtName: string]: {
+    peakHours: Array<{
+      start: string | null
+      end: string | null
+      fee: number
+    }>
+    nonPeakHours: {
+      start: string | null
+      end: string | null
+    }
+    fees: {
+      regular: number
+    }
+    availability: boolean
+  }
 }
 
 interface SportData {
@@ -66,17 +84,18 @@ interface SportData {
     start: string | null
     end: string | null
   }
-  peakHours?: {
+  peakHours?: Array<{
     start: string | null
     end: string | null
-  }
+    fee: number
+  }>
   fees?: {
     regular: number
-    peak: number
   }
   courtsData?: CourtsData
   available_court_count?: number
 }
+
 const notify = (message: string, success: boolean) =>
   toast[success ? "success" : "error"](message, {
     style: {
@@ -92,12 +111,12 @@ export default function SportsManagementPage() {
   const router = useRouter()
   const supabase = createClient()
   const [openAdd, setOpenAdd] = useState(false)
-  const [loading, setLoading] = useState(true)
   const { Column, HeaderCell, Cell } = Table
   const { user: currentUser } = useGlobalContext()
 
   const [sportData, setSportData] = useState<SportData[]>([])
   const [timeFormat, setTimeFormat] = useState("12 hours")
+  // 2. Add thirdPeakTime to the formData state
   const [formData, setFormData] = useState({
     sportName: "",
     icon: "",
@@ -108,10 +127,8 @@ export default function SportsManagementPage() {
     endTime: null,
     nonPeakStartTime: null,
     nonPeakEndTime: null,
-    peakStartTime: null,
-    peakEndTime: null,
+    peakHours: [{ id: crypto.randomUUID(), startTime: null, endTime: null, fee: "" }],
     regularFee: "",
-    peakFee: "",
     days: {
       Mon: false,
       Tue: false,
@@ -131,7 +148,6 @@ export default function SportsManagementPage() {
 
   const fetchSportsData = async () => {
     try {
-      setLoading(true)
       const { data, error } = await supabase
         .from("companies")
         .select("sports_management,time_format")
@@ -175,20 +191,16 @@ export default function SportsManagementPage() {
       }
     } catch (error) {
       console.error("Error fetching sports management data:", error)
-    } finally {
-      setLoading(false)
     }
   }
 
   const getAvailableCourtCount = (sport: any): number => {
     if (!sport.availability) return 0
 
-    // If we have courtsData, count available courts
     if (sport.courtsData) {
       return Object.values(sport.courtsData).filter((court: any) => court.availability).length
     }
 
-    // Fallback to old logic
     return sport.courts?.length || 0
   }
 
@@ -243,6 +255,35 @@ export default function SportsManagementPage() {
     }))
   }
 
+  const addPeakHour = () => {
+    // Check if we're already in the process of adding a peak hour to prevent duplicates
+    if (formData.peakHours.some((hour) => hour.startTime === null && hour.endTime === null && hour.fee === "")) {
+      return // Don't add another empty peak hour if one already exists
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      peakHours: [...prev.peakHours, { id: crypto.randomUUID(), startTime: null, endTime: null, fee: "" }],
+    }))
+  }
+
+  const removePeakHour = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      peakHours: prev.peakHours.filter((hour) => hour.id !== id),
+    }))
+  }
+
+  const handlePeakHourChange = (id: string, field: string, value: any) => {
+    setFormData((prev) => {
+      const updatedPeakHours = prev.peakHours.map((hour) => (hour.id === id ? { ...hour, [field]: value } : hour))
+      return {
+        ...prev,
+        peakHours: updatedPeakHours,
+      }
+    })
+  }
+
   const handleSave = async () => {
     try {
       const { data, error: fetchError } = await supabase
@@ -255,26 +296,54 @@ export default function SportsManagementPage() {
 
       const currentSportsData = data?.sports_management || []
 
-      // Parse comma-separated court names
-      const courtNames = formData.platformName
-        .split(",")
-        .map((name) => name.trim())
-        .filter((name) => name !== "")
+      const platformCount = Number.parseInt(formData.platformCount) || 0
+      const platformNameBase = formData.platformName.trim()
+  
+      // Determine if we should use letters or numbers based on the last character
+      const lastChar = platformNameBase.slice(-1)
+      const useLetters = isNaN(Number(lastChar)) // If last character is not a number
+  
+      const courtNames = []
+      for (let i = 0; i < platformCount; i++) {
+        if (useLetters) {
+          // For letter sequence (A, B, C...)
+          const baseWithoutLastChar = isNaN(Number(lastChar)) ? platformNameBase.slice(0, -1) : platformNameBase
+          const letter = String.fromCharCode(65 + i) // A=65, B=66, etc.
+          courtNames.push(`${baseWithoutLastChar}${letter}`)
+        } else {
+          // For number sequence (1, 2, 3...)
+          const baseWithoutLastNumber = !isNaN(Number(lastChar)) ? platformNameBase.slice(0, -1) : platformNameBase
+          courtNames.push(`${baseWithoutLastNumber}${i + 1}`)
+        }
+      }
+  
+      interface CourtsData {
+        [courtName: string]: {
+          peakHours: Array<{
+            start: string | null
+            end: string | null
+            fee: number
+          }>
+          nonPeakHours: {
+            start: string | null
+            end: string | null
+          }
+          fees: {
+            regular: number
+          }
+          availability: boolean
+        }
+      }
 
-      // Create courts data structure
       const courtsData: CourtsData = {}
 
-      // Initialize each court with the same settings
       courtNames.forEach((courtName) => {
         courtsData[courtName] = {
-          peakHours: {
-            start: formData.peakStartTime
-              ? dayjs(formData.peakStartTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
-              : null,
-            end: formData.peakEndTime
-              ? dayjs(formData.peakEndTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
-              : null,
-          },
+          peakHours: formData.peakHours.map((peak) => ({
+            start: peak.startTime ? dayjs(peak.startTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm") : null,
+            end: peak.endTime ? dayjs(peak.endTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm") : null,
+            fee: Number.parseFloat(peak.fee) || 0,
+          })),
           nonPeakHours: {
             start: formData.nonPeakStartTime
               ? dayjs(formData.nonPeakStartTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
@@ -285,7 +354,6 @@ export default function SportsManagementPage() {
           },
           fees: {
             regular: Number.parseFloat(formData.regularFee) || 0,
-            peak: Number.parseFloat(formData.peakFee) || 0,
           },
           availability: true,
         }
@@ -314,19 +382,15 @@ export default function SportsManagementPage() {
             ? dayjs(formData.nonPeakEndTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
             : null,
         },
-        peakHours: {
-          start: formData.peakStartTime
-            ? dayjs(formData.peakStartTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
-            : null,
-          end: formData.peakEndTime
-            ? dayjs(formData.peakEndTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
-            : null,
-        },
+        peakHours: formData.peakHours.map((peak) => ({
+          start: peak.startTime ? dayjs(peak.startTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm") : null,
+          end: peak.endTime ? dayjs(peak.endTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm") : null,
+          fee: Number.parseFloat(peak.fee) || 0,
+        })),
         days: formData.days,
         platform_count: courtNames.length,
         fees: {
           regular: Number.parseFloat(formData.regularFee) || 0,
-          peak: Number.parseFloat(formData.peakFee) || 0,
         },
         courtsData: courtsData,
       }
@@ -352,10 +416,8 @@ export default function SportsManagementPage() {
         endTime: null,
         nonPeakStartTime: null,
         nonPeakEndTime: null,
-        peakStartTime: null,
-        peakEndTime: null,
+        peakHours: [{ id: crypto.randomUUID(), startTime: null, endTime: null, fee: "" }],
         regularFee: "",
-        peakFee: "",
         days: {
           Mon: false,
           Tue: false,
@@ -366,6 +428,7 @@ export default function SportsManagementPage() {
           Sun: false,
         },
       })
+
       notify("Sport added successfully", true)
       setOpenAdd(false)
       fetchSportsData()
@@ -417,9 +480,10 @@ export default function SportsManagementPage() {
   const getAvailablePlatforms = (sport: SportData) => {
     if (!sport.availability) return 0
 
-    // If we have courtsData, count available courts
     if (sport.courtsData) {
-      return Object.values(sport.courtsData).filter((court) => court.availability).length
+      return Object.values(sport.courtsData as Record<string, { availability: boolean }>).filter(
+        (court) => court.availability,
+      ).length
     }
 
     return sport.available_court_count || sport.platform_count
@@ -428,9 +492,10 @@ export default function SportsManagementPage() {
   const getUnavailablePlatforms = (sport: SportData) => {
     if (!sport.availability) return sport.platform_count
 
-    // If we have courtsData, count unavailable courts
     if (sport.courtsData) {
-      const availableCount = Object.values(sport.courtsData).filter((court) => court.availability).length
+      const availableCount = Object.values(sport.courtsData as Record<string, { availability: boolean }>).filter(
+        (court) => court.availability,
+      ).length
       return sport.courts.length - availableCount
     }
 
@@ -446,7 +511,7 @@ export default function SportsManagementPage() {
         </div>
         <Sheet open={openAdd} onOpenChange={setOpenAdd}>
           <SheetTrigger>
-            <div className="bg-teal-800 text-white rounded-[12px] w-[130px] h-[40px] flex items-center justify-center text-xs cursor-pointer">
+            <div className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] w-[130px] h-[40px] flex items-center justify-center text-xs cursor-pointer">
               <FilePlus size={14} />
               <span className="ml-2">Add Sport</span>
             </div>
@@ -460,8 +525,8 @@ export default function SportsManagementPage() {
                 <div className="flex gap-4">
                   <div className="w-full space-y-2">
                     <Label className="text-gray-900 text-sm font-medium">Sport Name</Label>
-                    <Select value={formData.sportName} onValueChange={(value) => handleInputChange("sportName", value)}>
-                      <SelectTrigger className="w-full border border-zinc-300 bg-gray-50 text-sm pt-0.5 text-gray-700">
+                    {/* <Select value={formData.sportName} onValueChange={(value) => handleInputChange("sportName", value)}>
+                      <SelectTrigger className="w-full border border-zinc-300 bg-gray-50 text-sm  text-gray-700">
                         <SelectValue placeholder="Badminton / Tennis / Cricket..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -471,7 +536,16 @@ export default function SportsManagementPage() {
                         <SelectItem value="GYM">GYM</SelectItem>
                         <SelectItem value="Yoga Class">Yoga Class</SelectItem>
                       </SelectContent>
-                    </Select>
+                    </Select> */}
+                    <Input
+                      type="text"
+                      placeholder="Badminton / Tennis / Cricket..."
+                      className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
+                      value={formData.sportName || ""}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        handleInputChange("sportName", e.target.value)
+                      }
+                    />
                   </div>
 
                   <div className="w-full space-y-2">
@@ -484,32 +558,19 @@ export default function SportsManagementPage() {
                         <SelectItem value="badminton">
                           <div className="flex items-center gap-2">
                             <BadmintonIcon />
-                            {/* <span>Badminton</span> */}
                           </div>
                         </SelectItem>
                         <SelectItem value="tennis">
-                          <div className="flex items-center gap-2">
-                            {getSportIcon("tennis")}
-                            {/* <span>Tennis</span> */}
-                          </div>
+                          <div className="flex items-center gap-2">{getSportIcon("tennis")}</div>
                         </SelectItem>
                         <SelectItem value="cricket">
-                          <div className="flex items-center gap-2">
-                            {getSportIcon("cricket")}
-                            {/* <span>Cricket</span> */}
-                          </div>
+                          <div className="flex items-center gap-2">{getSportIcon("cricket")}</div>
                         </SelectItem>
                         <SelectItem value="gym">
-                          <div className="flex items-center gap-2">
-                            {getSportIcon("gym")}
-                            {/* <span>GYM</span> */}
-                          </div>
+                          <div className="flex items-center gap-2">{getSportIcon("gym")}</div>
                         </SelectItem>
                         <SelectItem value="yoga">
-                          <div className="flex items-center gap-2">
-                            {getSportIcon("yoga")}
-                            {/* <span>Yoga</span> */}
-                          </div>
+                          <div className="flex items-center gap-2">{getSportIcon("yoga")}</div>
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -532,7 +593,7 @@ export default function SportsManagementPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex flex-row gap-4">
                   <div className="w-full space-y-2">
                     <Label className="text-gray-900 text-sm font-medium">Platform Names </Label>
                     <input
@@ -542,11 +603,21 @@ export default function SportsManagementPage() {
                       value={formData.platformName}
                       onChange={(e) => handleInputChange("platformName", e.target.value)}
                     />
-                    {/* <p className="text-xs text-gray-500">Enter court names separated by commas (e.g., courtA,courtB)</p> */}
+                  </div>
+                  <div className="w-full space-y-2">
+                    <Label className="text-gray-900 text-sm font-medium">No. of Platform</Label>
+                    <input
+                      type="number"
+                      placeholder="2"
+                      className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
+                      value={formData.platformCount}
+                      onChange={(e) => handleInputChange("platformCount", e.target.value)}
+                     
+                    />
                   </div>
                 </div>
 
-                <div className="w-full space-y-2">
+                <div className="w-full  space-y-2">
                   <Label className="text-gray-900 text-sm font-medium">Platform Timing</Label>
                   <div className="flex items-center gap-4">
                     <div className="w-full space-y-1.5">
@@ -557,7 +628,7 @@ export default function SportsManagementPage() {
                         format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm "}
                         className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                         onChange={(time) => handleInputChange("startTime", time)}
-                        needConfirm={false}
+                      
                       />
                     </div>
 
@@ -569,91 +640,85 @@ export default function SportsManagementPage() {
                         format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
                         className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                         onChange={(time) => handleInputChange("endTime", time)}
-                        needConfirm={false}
+                     
                       />
                     </div>
                   </div>
+                  <div className="w-full space-y-2">
+                  <Label className="text-gray-900 text-sm font-medium">Regular Fee</Label>
+                  <input
+                    type="number"
+                    placeholder="12.99"
+                    className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
+                    value={formData.regularFee}
+                    onChange={(e) => handleInputChange("regularFee", e.target.value)}
+                  />
                 </div>
-
-                <div className="w-full space-y-2">
-                  <Label className="text-gray-900 text-sm font-medium">Non-Peak Hour Timing</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-full space-y-1.5">
-                      <Label className="text-sm text-gray-600">From</Label>
-                      <TimePicker
-                        value={formData.nonPeakStartTime}
-                        use12Hours={timeFormat === "12 hours"}
-                        format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
-                        className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                        onChange={(time) => handleInputChange("nonPeakStartTime", time)}
-                      />
-                    </div>
-
-                    <div className="w-full space-y-1.5">
-                      <Label className="text-gray-900 text-sm font-medium">To</Label>
-                      <TimePicker
-                        value={formData.nonPeakEndTime}
-                        use12Hours={timeFormat === "12 hours"}
-                        format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
-                        className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                        onChange={(time) => handleInputChange("nonPeakEndTime", time)}
-                      />
-                    </div>
-                  </div>
                 </div>
 
                 <div className="w-full space-y-2">
                   <Label className="text-gray-900 text-sm font-medium">Peak Hours</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-full space-y-1.5">
-                      <Label className="text-gray-900 text-sm font-medium">From</Label>
-                      <TimePicker
-                        value={formData.peakStartTime}
-                        use12Hours={timeFormat === "12 hours"}
-                        format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
-                        className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                        onChange={(time) => handleInputChange("peakStartTime", time)}
-                      />
-                    </div>
+                  {formData.peakHours.map((peakHour, index) => (
+                    <div key={peakHour.id} className="flex items-center gap-4 mb-2">
+                      <div className="w-full space-y-1.5">
+                        <Label className="text-sm text-gray-600">From</Label>
+                        <TimePicker
+                          value={peakHour.startTime}
+                          use12Hours={timeFormat === "12 hours"}
+                          format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm"}
+                          className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
+                          onChange={(time) => handlePeakHourChange(peakHour.id, "startTime", time)}
+                         
+                        />
+                      </div>
 
-                    <div className="w-full space-y-1.5">
-                      <Label className="text-gray-900 text-sm font-medium">To</Label>
-                      <TimePicker
-                        value={formData.peakEndTime}
-                        use12Hours={timeFormat === "12 hours"}
-                        format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
-                        className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                        onChange={(time) => handleInputChange("peakEndTime", time)}
-                      />
+                      <div className="w-full space-y-1.5">
+                        <Label className="text-gray-900 text-sm font-medium">To</Label>
+                        <TimePicker
+                          value={peakHour.endTime}
+                          use12Hours={timeFormat === "12 hours"}
+                          format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
+                          className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
+                          onChange={(time) => handlePeakHourChange(peakHour.id, "endTime", time)}
+                        
+                        />
+                      </div>
+
+                      <div className="w-full space-y-1.5">
+                        <Label className="text-gray-900 text-sm font-medium">Fee</Label>
+                        <input
+                          type="number"
+                          placeholder="15.99"
+                          className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
+                          value={peakHour.fee}
+                          onChange={(e) => handlePeakHourChange(peakHour.id, "fee", e.target.value)}
+                        />
+                      </div>
+
+                      {formData.peakHours.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removePeakHour(peakHour.id)}
+                          className="mt-6 p-1 text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
-                  </div>
+                  ))}
+                  {/* <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={addPeakHour}
+                      className="flex items-center justify-center text-teal-800 hover:text-teal-700"
+                    >
+                      <FilePlus size={16} />
+                      <span className="ml-1">Add Peak Hour</span>
+                    </button>
+                  </div> */}
                 </div>
 
-                <div className="flex gap-4">
-                  <div className="w-full space-y-2">
-                    <Label className="text-gray-900 text-sm font-medium">Regular Fee</Label>
-                    <input
-                      type="number"
-                      placeholder="12.99"
-                      className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
-                      value={formData.regularFee}
-                      onChange={(e) => handleInputChange("regularFee", e.target.value)}
-                      min={0}
-                    />
-                  </div>
-
-                  <div className="w-full space-y-2">
-                    <Label className="text-gray-900 text-sm font-medium">Peak Fee</Label>
-                    <input
-                      type="number"
-                      placeholder="15.99"
-                      className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
-                      value={formData.peakFee}
-                      onChange={(e) => handleInputChange("peakFee", e.target.value)}
-                      min={0}
-                    />
-                  </div>
-                </div>
+                
 
                 <div>
                   <Label className="text-gray-900 text-sm font-medium">Active Days</Label>
@@ -669,12 +734,35 @@ export default function SportsManagementPage() {
                         {day}
                       </label>
                     ))}
+                    <label className="flex items-center gap-1 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        className="accent-teal-800"
+                        checked={Object.values(formData.days).every((day) => day)}
+                        onChange={(e) => {
+                          const isChecked = e.target.checked
+                          setFormData((prev) => ({
+                            ...prev,
+                            days: {
+                              Mon: isChecked,
+                              Tue: isChecked,
+                              Wed: isChecked,
+                              Thu: isChecked,
+                              Fri: isChecked,
+                              Sat: isChecked,
+                              Sun: isChecked,
+                            },
+                          }))
+                        }}
+                      />
+                      <span>All</span>
+                    </label>
                   </div>
                 </div>
 
                 <div className="flex justify-start gap-2 bg-white w-full">
                   <button
-                    className="bg-teal-800 text-white rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2"
+                    className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2"
                     onClick={handleSave}
                   >
                     Save
@@ -692,9 +780,8 @@ export default function SportsManagementPage() {
         </Sheet>
       </div>
 
-      {/* Main Table */}
       <div className="w-full border border-zinc-200 rounded-[8px] bg-white text-sm my-6">
-        <Table data={sportData} autoHeight className="rounded-[8px]" loading={loading}>
+        <Table data={sportData} autoHeight className="rounded-[8px]">
           <Column width={70} align="center">
             <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>S.NO</HeaderCell>
             <Cell>

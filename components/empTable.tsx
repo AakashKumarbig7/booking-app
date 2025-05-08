@@ -20,6 +20,7 @@ interface Employee {
   last_name: string
   zipcode: string
   emp_id?: string
+  role: string
 }
 
 interface EmployeeTableProps {

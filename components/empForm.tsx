@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label"
 import DatePickerComponent from "./datePicker"
 import dayjs from "dayjs"
 import { forwardRef, useImperativeHandle, useState } from "react"
+import RoleSelector from "@/components/role-selector";
 
 interface Employee {
   employee_id?: string
@@ -22,6 +23,9 @@ interface Employee {
   last_name: string
   zipcode: string
   emp_id?: string
+  mobile_country_code?: string
+  emergency_mobile_country_code?: string
+  role: string
 }
 
 interface EmployeeFormProps {
@@ -33,7 +37,13 @@ interface EmployeeFormProps {
 interface ValidationErrors {
   [key: string]: string
 }
-
+const COUNTRY_CODES = [
+  { code: "+61", name: "Australia", maxLength: 9 },
+  { code: "+91", name: "India", maxLength: 10 },
+  { code: "+1", name: "USA/Canada", maxLength: 10 },
+  { code: "+44", name: "UK", maxLength: 10 },
+  // Add more country codes as needed
+];
 const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: ValidationErrors }, EmployeeFormProps>(
   ({ formData, handleInputChange, isEdit = false }, ref) => {
     const [errors, setErrors] = useState<ValidationErrors>({})
@@ -46,18 +56,34 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
           }
           break
         case "mobile":
-          if (!value.match(/^\d{10}$/)) {
-            return "Mobile number must be 10 digits"
+          if (!value) {
+            return "Mobile number is required"
+          }
+          const mobileCountryCode = formData.mobile_country_code || "+61";
+          const countryData = COUNTRY_CODES.find(c => c.code === mobileCountryCode);
+          if (countryData && value.length !== countryData.maxLength) {
+            return `Mobile number must be ${countryData.maxLength} digits for ${countryData.name}`;
+          }
+          if (!value.match(/^\d+$/)) {
+            return "Mobile number must contain only digits"
           }
           break
         case "emergency_mobile":
-          if (!value.match(/^\d{10}$/)) {
-            return "Emergency mobile number must be 10 digits"
+          if (!value) {
+            return "Emergency mobile number is required"
+          }
+          const emergencyCountryCode = formData.emergency_mobile_country_code || "+61";
+          const emergencyCountryData = COUNTRY_CODES.find(c => c.code === emergencyCountryCode);
+          if (emergencyCountryData && value.length !== emergencyCountryData.maxLength) {
+            return `Emergency mobile must be ${emergencyCountryData.maxLength} digits for ${emergencyCountryData.name}`;
+          }
+          if (!value.match(/^\d+$/)) {
+            return "Emergency mobile must contain only digits"
           }
           break
         case "zipcode":
-          if (!value.match(/^\d{4}$/)) {
-            return "Invalid zip code format. Use 5678"
+          if (!value) {
+            return "zipcode is required"
           }
           break
         case "password":
@@ -113,6 +139,11 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             return "Country is required"
           }
           break
+        case "role":
+          if (!value) {
+            return "Role is required"
+          }
+          break
         default:
           return undefined
       }
@@ -122,6 +153,8 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
     const validateAllFields = (): boolean => {
       const newErrors: ValidationErrors = {}
       for (const key in formData) {
+        // Skip validation for country code fields
+        if (key === 'mobile_country_code' || key === 'emergency_mobile_country_code') continue;
         const error = validateField(key, formData[key as keyof Employee] || "")
         if (error) {
           newErrors[key] = error
@@ -137,6 +170,28 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
       errors,
     }))
 
+    // Handle phone number input with validation
+    const handlePhoneNumberChange = (field: 'mobile' | 'emergency_mobile', value: string) => {
+      // Only allow numbers and limit length based on country code
+      const countryCodeField = field === 'mobile' ? 'mobile_country_code' : 'emergency_mobile_country_code';
+      const countryCode = formData[countryCodeField as keyof Employee] || "+61";
+      const countryData = COUNTRY_CODES.find(c => c.code === countryCode);
+      const maxLength = countryData?.maxLength || 10;
+      
+      if (value === '' || /^\d+$/.test(value)) {
+        if (value.length <= maxLength) {
+          handleInputChange(field, value);
+          const error = validateField(field, value);
+          if (error) {
+            setErrors({ ...errors, [field]: error });
+          } else {
+            const newErrors = { ...errors };
+            delete newErrors[field];
+            setErrors(newErrors);
+          }
+        }
+      }
+    }
     return (
       <div className="pt-2 px-3 overflow-y-auto flex-1 pb-4">
         {/* Each row */}
@@ -263,22 +318,36 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             <Label htmlFor="mobile" className="text-gray-900 text-sm font-medium">
               Mobile
             </Label>
-            <Input
-              id="mobile"
-              placeholder="0000000000"
-              value={formData.mobile || ""}
-              onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
-                if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
-                } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
-                }
-              }}
-            />
+            <div className="flex gap-1">
+              <select
+                value={formData.mobile_country_code || "+61"}
+                onChange={(e) => {
+                  handleInputChange("mobile_country_code", e.target.value);
+                  // Revalidate mobile number when country code changes
+                  const error = validateField("mobile", formData.mobile || "");
+                  if (error) {
+                    setErrors({ ...errors, mobile: error });
+                  } else {
+                    const newErrors = { ...errors };
+                    delete newErrors.mobile;
+                    setErrors(newErrors);
+                  }
+                }}
+                className="border rounded-md px-2 py-2 text-sm w-20"
+              >
+                {COUNTRY_CODES.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.code}
+                  </option>
+                ))}
+              </select>
+              <Input
+                id="mobile"
+                placeholder="123456789"
+                value={formData.mobile || ""}
+                onChange={(e) => handlePhoneNumberChange("mobile", e.target.value)}
+              />
+            </div>
             {errors.mobile && <p className="text-red-500 text-xs">{errors.mobile}</p>}
           </div>
         </div>
@@ -467,27 +536,52 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
 
         {/* Emergency Mobile */}
         <div className="w-full flex flex-row justify-between gap-2 mt-3">
-          <div className="space-y-2 w-full">
+        <div className="space-y-2 w-full">
             <Label htmlFor="emergency_mobile" className="text-gray-900 text-sm font-medium">
               Emergency Mobile
             </Label>
-            <Input
-              id="emergency_mobile"
-              placeholder="0000000000"
-              value={formData.emergency_mobile || ""}
-              onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
-                if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
-                } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
-                }
-              }}
-            />
+            <div className="flex gap-1">
+              <select
+                value={formData.emergency_mobile_country_code || "+61"}
+                onChange={(e) => {
+                  handleInputChange("emergency_mobile_country_code", e.target.value);
+                  // Revalidate emergency mobile when country code changes
+                  const error = validateField("emergency_mobile", formData.emergency_mobile || "");
+                  if (error) {
+                    setErrors({ ...errors, emergency_mobile: error });
+                  } else {
+                    const newErrors = { ...errors };
+                    delete newErrors.emergency_mobile;
+                    setErrors(newErrors);
+                  }
+                }}
+                className="border rounded-md px-2 py-2 text-sm w-20"
+              >
+                {COUNTRY_CODES.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.code}
+                  </option>
+                ))}
+              </select>
+              <Input
+                id="emergency_mobile"
+                placeholder="123456789"
+                value={formData.emergency_mobile || ""}
+                onChange={(e) => handlePhoneNumberChange("emergency_mobile", e.target.value)}
+              />
+            </div>
             {errors.emergency_mobile && <p className="text-red-500 text-xs">{errors.emergency_mobile}</p>}
+          </div>
+          <div className="space-y-2 w-full">
+            <Label htmlFor="role" className="text-gray-900 text-sm font-medium">
+              Role
+            </Label>
+            <RoleSelector
+              value={formData.role || ""}
+              onChange={(value:any) => handleInputChange("role", value)}
+              error={errors.role} 
+            />
+            {errors.role && <p className="text-red-500 text-xs">{errors.role}</p>}
           </div>
         </div>
       </div>

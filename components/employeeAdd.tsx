@@ -3,7 +3,6 @@ import { FilePlus } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/utils/supabase/client"
-
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
 import {
@@ -37,6 +36,8 @@ interface Employee {
   last_name: string
   zipcode: string
   emp_id?: string
+  role: string // Made optional to match the expected type
+  mobile_country_code?: string
 }
 
 // Define the validation interface
@@ -86,6 +87,7 @@ const EmployeeAdd = () => {
     zipcode: "",
     emergency_mobile: "",
     emp_id: "",
+    role: "",
   })
 
   // Add a ref to access the form validation methods
@@ -121,7 +123,6 @@ const EmployeeAdd = () => {
     setLoading(false)
   }
 
-  // Input change handler that directly updates the form state
   const handleInputChange = (id: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -147,6 +148,7 @@ const EmployeeAdd = () => {
       zipcode: "",
       emergency_mobile: "",
       emp_id: "",
+      role: "",
     })
   }
 
@@ -227,6 +229,7 @@ const EmployeeAdd = () => {
         zipcode: formattedData.zipcode,
         emergency_mobile: formattedData.emergency_mobile,
         emp_id: formattedData.emp_id,
+        role: formattedData.role,
       })
       .eq("emp_id", selectedEmployee.emp_id)
 
@@ -278,7 +281,7 @@ const EmployeeAdd = () => {
           <Toaster />
           <SheetTrigger asChild>
             <div
-              className="bg-teal-800 text-white rounded-[12px] w-[130px] h-[40px] flex items-center justify-center text-xs cursor-pointer"
+              className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] w-[130px] h-[40px] flex items-center justify-center text-xs cursor-pointer"
               onClick={handleOpenAddSheet}
             >
               <FilePlus size={14} className="mr-1" />
@@ -299,7 +302,7 @@ const EmployeeAdd = () => {
               Cancel
             </Button>
             <div
-              className="bg-teal-800 text-white rounded-[12px] w-[100px] h-[40px] flex items-center justify-center text-xs cursor-pointer"
+              className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] w-[100px] h-[40px] flex items-center justify-center text-xs cursor-pointer"
               onClick={handleAddEmployee}
             >
               Save

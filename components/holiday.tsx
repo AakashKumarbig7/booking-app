@@ -205,7 +205,7 @@ const Holidays = () => {
         <div className="flex justify-end mb-4">
           <SheetTrigger>
             <button
-              className="bg-teal-800 text-white rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center"
+              className="bg-teal-800 text-white rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center hover:bg-teal-700"
               onClick={AddHoliday}
             >
               <FilePlus size={14} />
@@ -281,7 +281,7 @@ const Holidays = () => {
               </div>
               <div className="flex justify-start gap-2 absolute bottom-0">
                 <button
-                  className="bg-primary-700 text-white rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2"
+                  className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2"
                   onClick={() => handleCreate(editData!)}
                 >
                   Save Holiday
