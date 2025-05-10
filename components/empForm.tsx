@@ -37,148 +37,130 @@ interface EmployeeFormProps {
 interface ValidationErrors {
   [key: string]: string
 }
+
 const COUNTRY_CODES = [
   { code: "+61", name: "Australia", maxLength: 9 },
   { code: "+91", name: "India", maxLength: 10 },
   { code: "+1", name: "USA/Canada", maxLength: 10 },
   { code: "+44", name: "UK", maxLength: 10 },
-  // Add more country codes as needed
 ];
+
 const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: ValidationErrors }, EmployeeFormProps>(
   ({ formData, handleInputChange, isEdit = false }, ref) => {
     const [errors, setErrors] = useState<ValidationErrors>({})
 
-    const validateField = (fieldId: string, value: string): string | undefined => {
+    const validateField = (fieldId: string, value: any): string | undefined => {
+      const stringValue = String(value || "");
+      
       switch (fieldId) {
         case "email":
-          if (!value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-            return "Invalid email format"
+          if (!stringValue) return "Email is required";
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(stringValue)) {
+            return "Invalid email format";
           }
-          break
+          break;
+
         case "mobile":
-          if (!value) {
-            return "Mobile number is required"
-          }
-          const mobileCountryCode = formData.mobile_country_code || "+61";
-          const countryData = COUNTRY_CODES.find(c => c.code === mobileCountryCode);
-          if (countryData && value.length !== countryData.maxLength) {
-            return `Mobile number must be ${countryData.maxLength} digits for ${countryData.name}`;
-          }
-          if (!value.match(/^\d+$/)) {
-            return "Mobile number must contain only digits"
-          }
-          break
         case "emergency_mobile":
-          if (!value) {
-            return "Emergency mobile number is required"
+          if (!stringValue) return `${fieldId === 'mobile' ? 'Mobile' : 'Emergency mobile'} number is required`;
+          if (!/^\d+$/.test(stringValue)) return "Must contain only digits";
+          
+          const countryCodeField = fieldId === 'mobile' 
+            ? 'mobile_country_code' 
+            : 'emergency_mobile_country_code';
+          const countryCode = formData[countryCodeField as keyof Employee] || "+61";
+          const countryData = COUNTRY_CODES.find(c => c.code === countryCode);
+          
+          if (countryData && stringValue.length !== countryData.maxLength) {
+            return `${fieldId === 'mobile' ? 'Mobile' : 'Emergency mobile'} must be ${countryData.maxLength} digits for ${countryData.name}`;
           }
-          const emergencyCountryCode = formData.emergency_mobile_country_code || "+61";
-          const emergencyCountryData = COUNTRY_CODES.find(c => c.code === emergencyCountryCode);
-          if (emergencyCountryData && value.length !== emergencyCountryData.maxLength) {
-            return `Emergency mobile must be ${emergencyCountryData.maxLength} digits for ${emergencyCountryData.name}`;
-          }
-          if (!value.match(/^\d+$/)) {
-            return "Emergency mobile must contain only digits"
-          }
-          break
-        case "zipcode":
-          if (!value) {
-            return "zipcode is required"
-          }
-          break
+          break;
+
         case "password":
-          if (!value) {
-            return "Pin is required"
-          }
-          if (!value.match(/^\d{6}$/)) {
-            return "Pin must be 6 digits"
-          }
-          break
+          if (!stringValue) return "Pin is required";
+          if (!/^\d{6}$/.test(stringValue)) return "Pin must be 6 digits";
+          break;
+
         case "emp_id":
-          if (!value) {
-            return "Employee ID is required"
-          }
-          break
+          if (!stringValue) return "Employee ID is required";
+          break;
+
         case "first_name":
-          if (!value) {
-            return "First Name is required"
-          }
-          break
+          if (!stringValue) return "First Name is required";
+          break;
+
         case "last_name":
-          if (!value) {
-            return "Last Name is required"
-          }
-          break
+          if (!stringValue) return "Last Name is required";
+          break;
+
         case "designation":
-          if (!value) {
-            return "Designation is required"
-          }
-          break
+          if (!stringValue) return "Designation is required";
+          break;
+
         case "blood_group":
-          if (!value) {
-            return "Blood Group is required"
-          }
-          break
+          if (!stringValue) return "Blood Group is required";
+          break;
+
         case "address":
-          if (!value) {
-            return "Address is required"
-          }
-          break
+          if (!stringValue) return "Address is required";
+          break;
+
         case "city":
-          if (!value) {
-            return "City is required"
-          }
-          break
+          if (!stringValue) return "City is required";
+          break;
+
         case "state":
-          if (!value) {
-            return "State is required"
-          }
-          break
+          if (!stringValue) return "State is required";
+          break;
+
         case "country":
-          if (!value) {
-            return "Country is required"
-          }
-          break
+          if (!stringValue) return "Country is required";
+          break;
+
         case "role":
-          if (!value) {
-            return "Role is required"
-          }
-          break
+          if (!stringValue) return "Role is required";
+          break;
+
+        case "zipcode":
+          if (!stringValue) return "Zipcode is required";
+          break;
+
         default:
-          return undefined
+          return undefined;
       }
-      return undefined
-    }
+      return undefined;
+    };
 
     const validateAllFields = (): boolean => {
-      const newErrors: ValidationErrors = {}
+      const newErrors: ValidationErrors = {};
+      
       for (const key in formData) {
-        // Skip validation for country code fields
         if (key === 'mobile_country_code' || key === 'emergency_mobile_country_code') continue;
-        const error = validateField(key, formData[key as keyof Employee] || "")
+        
+        const value = formData[key as keyof Employee];
+        const error = validateField(key, value !== undefined ? String(value) : "");
+        
         if (error) {
-          newErrors[key] = error
+          newErrors[key] = error;
         }
       }
-      setErrors(newErrors)
-      return Object.keys(newErrors).length === 0
-    }
 
-    // Expose methods to parent component
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+
     useImperativeHandle(ref, () => ({
       validateAllFields,
       errors,
-    }))
+    }));
 
-    // Handle phone number input with validation
     const handlePhoneNumberChange = (field: 'mobile' | 'emergency_mobile', value: string) => {
-      // Only allow numbers and limit length based on country code
-      const countryCodeField = field === 'mobile' ? 'mobile_country_code' : 'emergency_mobile_country_code';
-      const countryCode = formData[countryCodeField as keyof Employee] || "+61";
-      const countryData = COUNTRY_CODES.find(c => c.code === countryCode);
-      const maxLength = countryData?.maxLength || 10;
-      
       if (value === '' || /^\d+$/.test(value)) {
+        const countryCodeField = field === 'mobile' ? 'mobile_country_code' : 'emergency_mobile_country_code';
+        const countryCode = formData[countryCodeField as keyof Employee] || "+61";
+        const countryData = COUNTRY_CODES.find(c => c.code === countryCode);
+        const maxLength = countryData?.maxLength || 10;
+        
         if (value.length <= maxLength) {
           handleInputChange(field, value);
           const error = validateField(field, value);
@@ -191,10 +173,11 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
           }
         }
       }
-    }
+    };
+
     return (
       <div className="pt-2 px-3 overflow-y-auto flex-1 pb-4">
-        {/* Each row */}
+        {/* Employee ID & Pin */}
         <div className="w-full flex flex-row justify-between gap-2">
           <div className="space-y-2 w-full">
             <Label htmlFor="emp_id" className="text-gray-900 text-sm font-medium">
@@ -205,14 +188,14 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
               placeholder="Employee ID"
               value={formData.emp_id || ""}
               onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
+                handleInputChange(e.target.id, e.target.value);
+                const error = validateField(e.target.id, e.target.value);
                 if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
+                  setErrors({ ...errors, [e.target.id]: error });
                 } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
+                  const newErrors = { ...errors };
+                  delete newErrors[e.target.id];
+                  setErrors(newErrors);
                 }
               }}
             />
@@ -228,14 +211,14 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
               placeholder="123456"
               value={formData.password || ""}
               onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
+                handleInputChange(e.target.id, e.target.value);
+                const error = validateField(e.target.id, e.target.value);
                 if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
+                  setErrors({ ...errors, [e.target.id]: error });
                 } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
+                  const newErrors = { ...errors };
+                  delete newErrors[e.target.id];
+                  setErrors(newErrors);
                 }
               }}
             />
@@ -243,6 +226,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
           </div>
         </div>
 
+        {/* First Name & Last Name */}
         <div className="w-full flex flex-row justify-between gap-2 mt-3">
           <div className="space-y-2 w-full">
             <Label htmlFor="first_name" className="text-gray-900 text-sm font-medium">
@@ -253,14 +237,14 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
               placeholder="First Name"
               value={formData.first_name || ""}
               onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
+                handleInputChange(e.target.id, e.target.value);
+                const error = validateField(e.target.id, e.target.value);
                 if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
+                  setErrors({ ...errors, [e.target.id]: error });
                 } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
+                  const newErrors = { ...errors };
+                  delete newErrors[e.target.id];
+                  setErrors(newErrors);
                 }
               }}
             />
@@ -275,14 +259,14 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
               placeholder="Last Name"
               value={formData.last_name || ""}
               onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
+                handleInputChange(e.target.id, e.target.value);
+                const error = validateField(e.target.id, e.target.value);
                 if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
+                  setErrors({ ...errors, [e.target.id]: error });
                 } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
+                  const newErrors = { ...errors };
+                  delete newErrors[e.target.id];
+                  setErrors(newErrors);
                 }
               }}
             />
@@ -301,14 +285,14 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
               placeholder="Email"
               value={formData.email || ""}
               onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
+                handleInputChange(e.target.id, e.target.value);
+                const error = validateField(e.target.id, e.target.value);
                 if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
+                  setErrors({ ...errors, [e.target.id]: error });
                 } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
+                  const newErrors = { ...errors };
+                  delete newErrors[e.target.id];
+                  setErrors(newErrors);
                 }
               }}
             />
@@ -323,7 +307,6 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
                 value={formData.mobile_country_code || "+61"}
                 onChange={(e) => {
                   handleInputChange("mobile_country_code", e.target.value);
-                  // Revalidate mobile number when country code changes
                   const error = validateField("mobile", formData.mobile || "");
                   if (error) {
                     setErrors({ ...errors, mobile: error });
@@ -374,14 +357,14 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
               placeholder="Designation"
               value={formData.designation || ""}
               onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
+                handleInputChange(e.target.id, e.target.value);
+                const error = validateField(e.target.id, e.target.value);
                 if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
+                  setErrors({ ...errors, [e.target.id]: error });
                 } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
+                  const newErrors = { ...errors };
+                  delete newErrors[e.target.id];
+                  setErrors(newErrors);
                 }
               }}
             />
@@ -396,14 +379,14 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
               placeholder="O +ve"
               value={formData.blood_group || ""}
               onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
+                handleInputChange(e.target.id, e.target.value);
+                const error = validateField(e.target.id, e.target.value);
                 if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
+                  setErrors({ ...errors, [e.target.id]: error });
                 } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
+                  const newErrors = { ...errors };
+                  delete newErrors[e.target.id];
+                  setErrors(newErrors);
                 }
               }}
             />
@@ -422,14 +405,14 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
               placeholder="Address"
               value={formData.address || ""}
               onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
+                handleInputChange(e.target.id, e.target.value);
+                const error = validateField(e.target.id, e.target.value);
                 if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
+                  setErrors({ ...errors, [e.target.id]: error });
                 } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
+                  const newErrors = { ...errors };
+                  delete newErrors[e.target.id];
+                  setErrors(newErrors);
                 }
               }}
               className="h-[60px]"
@@ -449,14 +432,14 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
               placeholder="Sydney"
               value={formData.city || ""}
               onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
+                handleInputChange(e.target.id, e.target.value);
+                const error = validateField(e.target.id, e.target.value);
                 if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
+                  setErrors({ ...errors, [e.target.id]: error });
                 } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
+                  const newErrors = { ...errors };
+                  delete newErrors[e.target.id];
+                  setErrors(newErrors);
                 }
               }}
             />
@@ -468,17 +451,17 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             </Label>
             <Input
               id="state"
-              placeholder="Melbourne"
+              placeholder="NSW"
               value={formData.state || ""}
               onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
+                handleInputChange(e.target.id, e.target.value);
+                const error = validateField(e.target.id, e.target.value);
                 if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
+                  setErrors({ ...errors, [e.target.id]: error });
                 } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
+                  const newErrors = { ...errors };
+                  delete newErrors[e.target.id];
+                  setErrors(newErrors);
                 }
               }}
             />
@@ -497,14 +480,14 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
               placeholder="Australia"
               value={formData.country || ""}
               onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
+                handleInputChange(e.target.id, e.target.value);
+                const error = validateField(e.target.id, e.target.value);
                 if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
+                  setErrors({ ...errors, [e.target.id]: error });
                 } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
+                  const newErrors = { ...errors };
+                  delete newErrors[e.target.id];
+                  setErrors(newErrors);
                 }
               }}
             />
@@ -516,17 +499,17 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             </Label>
             <Input
               id="zipcode"
-              placeholder="5678"
+              placeholder="2000"
               value={formData.zipcode || ""}
               onChange={(e) => {
-                handleInputChange(e.target.id, e.target.value)
-                const error = validateField(e.target.id, e.target.value)
+                handleInputChange(e.target.id, e.target.value);
+                const error = validateField(e.target.id, e.target.value);
                 if (error) {
-                  setErrors({ ...errors, [e.target.id]: error })
+                  setErrors({ ...errors, [e.target.id]: error });
                 } else {
-                  const newErrors = { ...errors }
-                  delete newErrors[e.target.id]
-                  setErrors(newErrors)
+                  const newErrors = { ...errors };
+                  delete newErrors[e.target.id];
+                  setErrors(newErrors);
                 }
               }}
             />
@@ -534,9 +517,9 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
           </div>
         </div>
 
-        {/* Emergency Mobile */}
+        {/* Emergency Mobile & Role */}
         <div className="w-full flex flex-row justify-between gap-2 mt-3">
-        <div className="space-y-2 w-full">
+          <div className="space-y-2 w-full">
             <Label htmlFor="emergency_mobile" className="text-gray-900 text-sm font-medium">
               Emergency Mobile
             </Label>
@@ -545,7 +528,6 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
                 value={formData.emergency_mobile_country_code || "+61"}
                 onChange={(e) => {
                   handleInputChange("emergency_mobile_country_code", e.target.value);
-                  // Revalidate emergency mobile when country code changes
                   const error = validateField("emergency_mobile", formData.emergency_mobile || "");
                   if (error) {
                     setErrors({ ...errors, emergency_mobile: error });
@@ -578,18 +560,17 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             </Label>
             <RoleSelector
               value={formData.role || ""}
-              onChange={(value:any) => handleInputChange("role", value)}
-              error={errors.role} 
+              onChange={(value: string) => handleInputChange("role", value)}
+              error={errors.role}
             />
             {errors.role && <p className="text-red-500 text-xs">{errors.role}</p>}
           </div>
         </div>
       </div>
-    )
-  },
-)
+    );
+  }
+);
 
-// Make sure this line is present and correct
-EmployeeForm.displayName = "EmployeeForm"
+EmployeeForm.displayName = "EmployeeForm";
 
-export default EmployeeForm
+export default EmployeeForm;

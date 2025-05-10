@@ -216,6 +216,7 @@ console.log("user",user)
       .single();
 
     setUser(user.user);
+    
 
     if (company) {
       const AllData = {
@@ -249,6 +250,7 @@ console.log("user",user)
   }
 
   async function handleSave() {
+    console.log("function eneterd")
     // Validate working hours before saving
     const validationErrors = validateWorkingHours();
     if (validationErrors.length > 0) {
@@ -257,6 +259,7 @@ console.log("user",user)
     }
 
     if (companyName !== previousName) {
+      console.log("user table eneterd")
       const { error: userUpdateError } = await supabase
         .from("users")
         .update({ store_name: companyName })

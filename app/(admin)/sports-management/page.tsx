@@ -148,6 +148,11 @@ export default function SportsManagementPage() {
 
   const fetchSportsData = async () => {
     try {
+       if (!currentUser?.email) {
+      console.log("No current user available");
+      return;
+    }
+
       const { data, error } = await supabase
         .from("companies")
         .select("sports_management,time_format")
@@ -274,7 +279,48 @@ export default function SportsManagementPage() {
     }))
   }
 
+  // In the handlePeakHourChange function, add validation to ensure peak hours are within platform timing
   const handlePeakHourChange = (id: string, field: string, value: any) => {
+    // For validation checks
+    const validateTimeValue = (value: any, fieldType: string, peakId: string) => {
+      // Get platform start and end times
+      const platformStart = formData.startTime ? dayjs(formData.startTime) : null
+      const platformEnd = formData.endTime ? dayjs(formData.endTime) : null
+
+      // If platform times are set, validate the peak hour time
+      if (platformStart && platformEnd && value) {
+        // Check if peak time is outside platform hours
+        if (value.isBefore(platformStart) || value.isAfter(platformEnd)) {
+          // Show error toast - make sure this is called
+          notify(
+            `Peak hours must be within platform timing (${platformStart.format("h:mm A")} - ${platformEnd.format("h:mm A")})`,
+            false,
+          )
+          return false
+        }
+      }
+
+      // For end time, check if it's before start time
+      if (fieldType === "endTime") {
+        const peakHour = formData.peakHours.find((hour) => hour.id === peakId)
+        if (peakHour?.startTime && value) {
+          const startTime = dayjs(peakHour.startTime)
+          if (value.isBefore(startTime)) {
+            notify("End time cannot be before start time", false)
+            return false
+          }
+        }
+      }
+
+      return true
+    }
+
+    if (field === "startTime" || field === "endTime") {
+      if (!validateTimeValue(value, field, id)) {
+        return
+      }
+    }
+
     setFormData((prev) => {
       const updatedPeakHours = prev.peakHours.map((hour) => (hour.id === id ? { ...hour, [field]: value } : hour))
       return {
@@ -282,6 +328,19 @@ export default function SportsManagementPage() {
         peakHours: updatedPeakHours,
       }
     })
+  }
+
+  // Add a new function to handle platform end time changes
+  const handleEndTimeChange = (time: any) => {
+    if (formData.startTime && time) {
+      const startTime = dayjs(formData.startTime)
+
+      if (time.isBefore(startTime)) {
+        notify("End time cannot be before start time", false)
+        return
+      }
+    }
+    handleInputChange("endTime", time)
   }
 
   const handleSave = async () => {
@@ -298,11 +357,11 @@ export default function SportsManagementPage() {
 
       const platformCount = Number.parseInt(formData.platformCount) || 0
       const platformNameBase = formData.platformName.trim()
-  
+
       // Determine if we should use letters or numbers based on the last character
       const lastChar = platformNameBase.slice(-1)
       const useLetters = isNaN(Number(lastChar)) // If last character is not a number
-  
+
       const courtNames = []
       for (let i = 0; i < platformCount; i++) {
         if (useLetters) {
@@ -316,7 +375,7 @@ export default function SportsManagementPage() {
           courtNames.push(`${baseWithoutLastNumber}${i + 1}`)
         }
       }
-  
+
       interface CourtsData {
         [courtName: string]: {
           peakHours: Array<{
@@ -340,16 +399,16 @@ export default function SportsManagementPage() {
       courtNames.forEach((courtName) => {
         courtsData[courtName] = {
           peakHours: formData.peakHours.map((peak) => ({
-            start: peak.startTime ? dayjs(peak.startTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm") : null,
-            end: peak.endTime ? dayjs(peak.endTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm") : null,
+            start: peak.startTime ? dayjs(peak.startTime).format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm") : null,
+            end: peak.endTime ? dayjs(peak.endTime).format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm") : null,
             fee: Number.parseFloat(peak.fee) || 0,
           })),
           nonPeakHours: {
             start: formData.nonPeakStartTime
-              ? dayjs(formData.nonPeakStartTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+              ? dayjs(formData.nonPeakStartTime).format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm")
               : null,
             end: formData.nonPeakEndTime
-              ? dayjs(formData.nonPeakEndTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+              ? dayjs(formData.nonPeakEndTime).format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm")
               : null,
           },
           fees: {
@@ -370,21 +429,21 @@ export default function SportsManagementPage() {
         status: formData.sportStatus,
         timing: {
           start: formData.startTime
-            ? dayjs(formData.startTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+            ? dayjs(formData.startTime).format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm")
             : null,
-          end: formData.endTime ? dayjs(formData.endTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm") : null,
+          end: formData.endTime ? dayjs(formData.endTime).format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm") : null,
         },
         nonPeakHours: {
           start: formData.nonPeakStartTime
-            ? dayjs(formData.nonPeakStartTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+            ? dayjs(formData.nonPeakStartTime).format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm")
             : null,
           end: formData.nonPeakEndTime
-            ? dayjs(formData.nonPeakEndTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")
+            ? dayjs(formData.nonPeakEndTime).format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm")
             : null,
         },
         peakHours: formData.peakHours.map((peak) => ({
           start: peak.startTime ? dayjs(peak.startTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm") : null,
-          end: peak.endTime ? dayjs(peak.endTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm") : null,
+          end: peak.endTime ? dayjs(peak.endTime).format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm") : null,
           fee: Number.parseFloat(peak.fee) || 0,
         })),
         days: formData.days,
@@ -435,6 +494,31 @@ export default function SportsManagementPage() {
     } catch (error) {
       console.error("Error saving sport data:", error)
     }
+  }
+
+  const resetForm = () => {
+    setFormData({
+      sportName: "",
+      icon: "",
+      sportStatus: "active",
+      platformName: "",
+      platformCount: "",
+      startTime: null,
+      endTime: null,
+      nonPeakStartTime: null,
+      nonPeakEndTime: null,
+      peakHours: [{ id: crypto.randomUUID(), startTime: null, endTime: null, fee: "" }],
+      regularFee: "",
+      days: {
+        Mon: false,
+        Tue: false,
+        Wed: false,
+        Thu: false,
+        Fri: false,
+        Sat: false,
+        Sun: false,
+      },
+    })
   }
 
   const handleEdit = (id: number) => {
@@ -509,7 +593,13 @@ export default function SportsManagementPage() {
           <h1 className="text-xl font-bold text-zinc-950">Sport Management</h1>
           <p className="text-sm text-zinc-500">Add & manage sports details.</p>
         </div>
-        <Sheet open={openAdd} onOpenChange={setOpenAdd}>
+        <Sheet
+          open={openAdd}
+          onOpenChange={(open) => {
+            setOpenAdd(open)
+            if (!open) resetForm()
+          }}
+        >
           <SheetTrigger>
             <div className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] w-[130px] h-[40px] flex items-center justify-center text-xs cursor-pointer">
               <FilePlus size={14} />
@@ -612,7 +702,6 @@ export default function SportsManagementPage() {
                       className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
                       value={formData.platformCount}
                       onChange={(e) => handleInputChange("platformCount", e.target.value)}
-                     
                     />
                   </div>
                 </div>
@@ -625,10 +714,9 @@ export default function SportsManagementPage() {
                       <TimePicker
                         value={formData.startTime}
                         use12Hours={timeFormat === "12 hours"}
-                        format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm "}
+                        format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm"}
                         className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                         onChange={(time) => handleInputChange("startTime", time)}
-                      
                       />
                     </div>
 
@@ -637,23 +725,22 @@ export default function SportsManagementPage() {
                       <TimePicker
                         value={formData.endTime}
                         use12Hours={timeFormat === "12 hours"}
-                        format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
+                        format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm "}
                         className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                        onChange={(time) => handleInputChange("endTime", time)}
-                     
+                        onChange={handleEndTimeChange}
                       />
                     </div>
                   </div>
                   <div className="w-full space-y-2">
-                  <Label className="text-gray-900 text-sm font-medium">Regular Fee</Label>
-                  <input
-                    type="number"
-                    placeholder="12.99"
-                    className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
-                    value={formData.regularFee}
-                    onChange={(e) => handleInputChange("regularFee", e.target.value)}
-                  />
-                </div>
+                    <Label className="text-gray-900 text-sm font-medium">Regular Fee</Label>
+                    <input
+                      type="number"
+                      placeholder="12.99"
+                      className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
+                      value={formData.regularFee}
+                      onChange={(e) => handleInputChange("regularFee", e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 <div className="w-full space-y-2">
@@ -665,10 +752,9 @@ export default function SportsManagementPage() {
                         <TimePicker
                           value={peakHour.startTime}
                           use12Hours={timeFormat === "12 hours"}
-                          format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm"}
+                          format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm"}
                           className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                           onChange={(time) => handlePeakHourChange(peakHour.id, "startTime", time)}
-                         
                         />
                       </div>
 
@@ -677,10 +763,9 @@ export default function SportsManagementPage() {
                         <TimePicker
                           value={peakHour.endTime}
                           use12Hours={timeFormat === "12 hours"}
-                          format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
+                          format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm "}
                           className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                           onChange={(time) => handlePeakHourChange(peakHour.id, "endTime", time)}
-                        
                         />
                       </div>
 
@@ -717,8 +802,6 @@ export default function SportsManagementPage() {
                     </button>
                   </div> */}
                 </div>
-
-                
 
                 <div>
                   <Label className="text-gray-900 text-sm font-medium">Active Days</Label>
@@ -769,7 +852,10 @@ export default function SportsManagementPage() {
                   </button>
                   <div
                     className="border border-border_color rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2 cursor-pointer"
-                    onClick={() => setOpenAdd(false)}
+                    onClick={() => {
+                      resetForm()
+                      setOpenAdd(false)
+                    }}
                   >
                     Cancel
                   </div>

@@ -185,6 +185,8 @@ const EmployeeAdd = () => {
     setSelectedEmployee(employee)
     setFormData({
       ...employee,
+      mobile: employee.mobile?.toString() || "",
+      emergency_mobile: employee.emergency_mobile?.toString() || "",
       employee_id: employee.employee_id || "",
       password: employee.password || "",
       emp_id: employee.emp_id || "",
@@ -205,8 +207,9 @@ const EmployeeAdd = () => {
     // Format mobile numbers by removing spaces for database
     const formattedData = {
       ...formData,
-      mobile: formData.mobile.replace(/\s+/g, ""),
-      emergency_mobile: formData.emergency_mobile.replace(/\s+/g, ""),
+      mobile: (formData.mobile || "").toString().replace(/\s+/g, ""),
+emergency_mobile: (formData.emergency_mobile || "").toString().replace(/\s+/g, ""),
+
     }
 
     // Update employee

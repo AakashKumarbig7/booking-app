@@ -151,7 +151,7 @@ export default function EditSportPage({
     // nonPeakEndTime: Date | null
     peakHours: Array<{
       id: string
-      startTime: Date | null
+      startTime: Date| null
       endTime: Date | null
       fee: string
     }>
@@ -212,6 +212,7 @@ export default function EditSportPage({
 
       if (data) {
         setTimeFormat(data.time_format)
+        console.log("Data", data)
 
         if (data.sports_management) {
           const transformedData = data.sports_management.map((item: any) => ({
@@ -249,7 +250,7 @@ export default function EditSportPage({
             const peakHoursArray = Array.isArray(sportToEdit.peakHours)
               ? sportToEdit.peakHours.map((peak: any) => ({
                   id: crypto.randomUUID(),
-                  startTime: peak.start ? dayjs(peak.start, "HH:mm").toDate() : null,
+                  startTime: peak.start ? dayjs(peak.start,"HH:mm") : null,
                   endTime: peak.end ? dayjs(peak.end, "HH:mm").toDate() : null,
                   fee: peak.fee?.toString() || "",
                 }))
@@ -257,9 +258,9 @@ export default function EditSportPage({
                   {
                     id: crypto.randomUUID(),
                     startTime: sportToEdit.peakHours?.start
-                      ? dayjs(sportToEdit.peakHours.start, "HH:mm").toDate()
+                      ? dayjs(sportToEdit.peakHours.start, "HH:mm").format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm")
                       : null,
-                    endTime: sportToEdit.peakHours?.end ? dayjs(sportToEdit.peakHours.end, "HH:mm").toDate() : null,
+                    endTime: sportToEdit.peakHours?.end ? dayjs(sportToEdit.peakHours.end, "HH:mm").format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm") : null,
                     fee: sportToEdit.fees?.peak?.toString() || "",
                   },
                 ]
@@ -427,23 +428,23 @@ export default function EditSportPage({
 
       const platformCount = Number.parseInt(editFormData.platformCount) || 0
       const platformNameBase = editFormData.platformName.trim()
-  
+
       // Determine if we should use letters or numbers based on the last character
       const lastChar = platformNameBase.slice(-1)
       const useLetters = isNaN(Number(lastChar)) // If last character is not a number
-  
-      let courtNames: string[] = [];
+
+      let courtNames: string[] = []
       if (courtData.length > 0) {
         // Use existing court names from courtData
-        courtNames = courtData.map((court) => court.name);
+        courtNames = courtData.map((court) => court.name)
       } else {
         // Only generate new names if no courts exist
         for (let i = 0; i < Number.parseInt(editFormData.platformCount); i++) {
           if (useLetters) {
-            const letter = String.fromCharCode(65 + i);
-            courtNames.push(`${platformNameBase}${letter}`);
+            const letter = String.fromCharCode(65 + i)
+            courtNames.push(`${platformNameBase}${letter}`)
           } else {
-            courtNames.push(`${platformNameBase}${i + 1}`);
+            courtNames.push(`${platformNameBase}${i + 1}`)
           }
         }
       }
@@ -618,32 +619,103 @@ export default function EditSportPage({
     }
   }
 
+  // In the handlePeakHourChange function, add validation to ensure peak hours are within platform timing
   const handlePeakHourChange = (id: string, field: string, value: any, courtIndex?: number) => {
-    if (courtIndex !== undefined) {
-      setCourtData((prev) => {
-        const newData = [...prev]
-        if (Array.isArray(newData[courtIndex].peakHours)) {
-          // Find the peak hour with the matching ID and update it
-          newData[courtIndex].peakHours = newData[courtIndex].peakHours.map((hour) => {
-            if (hour.id === id) {
-              if (field === "fee") {
-                return { ...hour, fee: Number(value) || 0 }
-              } else if (field === "start") {
-                return { ...hour, start: value ? value.format("HH:mm") : null }
-              } else if (field === "end") {
-                return { ...hour, end: value ? value.format("HH:mm") : null }
-              }
-            }
-            return hour
-          })
+    // For validation checks
+    const validateTimeValue = (value: any, fieldType: string, peakId: string, courtIdx?: number) => {
+      // Get platform start and end times
+      const platformStart = editFormData.startTime ? dayjs(editFormData.startTime).format("HH:mm") : null
+      const platformEnd = editFormData.endTime ? dayjs(editFormData.endTime).format("HH:mm") : null
+
+      // If platform times are set, validate the peak hour time
+      if (platformStart && platformEnd && value) {
+        // Check if peak time is outside platform hours
+        if (value.isBefore(platformStart) || value.isAfter(platformEnd)) {
+          // Show error toast - ensure this is called
+          // notify(
+          //   `Peak hours must be within platform timing (${platformStart.format("h:mm A")} - ${platformEnd.format("h:mm A")})`,
+          //   false,
+          // )
+          return false
         }
-        return newData
-      })
+      }
+
+      // For end time, check if it's before start time
+      if (fieldType === "end" || fieldType === "endTime") {
+        let startTime = null
+
+        if (courtIdx !== undefined) {
+          const peakHour = courtData[courtIdx]?.peakHours.find((hour) => hour.id === peakId)
+          if (peakHour?.start) {
+            startTime = dayjs(peakHour.start, "HH:mm")
+          }
+        } else {
+          const peakHour = editFormData.peakHours.find((hour) => hour.id === peakId)
+          if (peakHour?.startTime) {
+            startTime = dayjs(peakHour.startTime)
+          }
+        }
+
+        if (startTime && value && value.isBefore(startTime)) {
+          notify("End time cannot be before start time", false)
+          return false
+        }
+      }
+
+      return true
+    }
+
+    if (courtIndex !== undefined) {
+      // For court-specific peak hours
+      if (field === "start" || field === "end") {
+        if (!validateTimeValue(value, field, id, courtIndex)) {
+          return
+        }
+
+        setCourtData((prev) => {
+          const newData = [...prev]
+          if (Array.isArray(newData[courtIndex].peakHours)) {
+            newData[courtIndex].peakHours = newData[courtIndex].peakHours.map((hour) => {
+              if (hour.id === id) {
+                if (field === "start") {
+                  return { ...hour, start: value ? value.format("HH:mm") : null }
+                } else if (field === "end") {
+                  return { ...hour, end: value ? value.format("HH:mm") : null }
+                }
+              }
+              return hour
+            })
+          }
+          return newData
+        })
+      } else {
+        // For fee field
+        setCourtData((prev) => {
+          const newData = [...prev]
+          if (Array.isArray(newData[courtIndex].peakHours)) {
+            newData[courtIndex].peakHours = newData[courtIndex].peakHours.map((hour) => {
+              if (hour.id === id) {
+                return { ...hour, fee: Number(value) || 0 }
+              }
+              return hour
+            })
+          }
+          return newData
+        })
+      }
+
       setEditedCourts((prev) => ({
         ...prev,
         [courtIndex]: true,
       }))
     } else {
+      // For main form peak hours
+      if (field === "startTime" || field === "endTime") {
+        if (!validateTimeValue(value, field, id)) {
+          return
+        }
+      }
+
       setEditFormData((prev) => {
         const updatedPeakHours = prev.peakHours.map((hour) => (hour.id === id ? { ...hour, [field]: value } : hour))
         return {
@@ -656,63 +728,76 @@ export default function EditSportPage({
 
   const handleAddCourt = () => {
     // Get all existing court names
-    const existingNames = courtData.map(court => court.name);
-    
+    const existingNames = courtData.map((court) => court.name)
+
     // Find highest number/letter in existing names
-    let highestIndex = 0;
-    let useLetters = false;
-    
-    existingNames.forEach(name => {
+    let highestIndex = 0
+    let useLetters = false
+
+    existingNames.forEach((name) => {
       // Check for number suffix
-      const numMatch = name.match(/\d+$/);
+      const numMatch = name.match(/\d+$/)
       if (numMatch) {
-        const num = parseInt(numMatch[0]);
-        if (num > highestIndex) highestIndex = num;
-      } 
+        const num = Number.parseInt(numMatch[0])
+        if (num > highestIndex) highestIndex = num
+      }
       // Check for letter suffix
       else {
-        const letter = name.slice(-1).toUpperCase();
+        const letter = name.slice(-1).toUpperCase()
         if (/[A-Z]/.test(letter)) {
-          useLetters = true;
-          const letterIndex = letter.charCodeAt(0) - 65;
-          if (letterIndex > highestIndex) highestIndex = letterIndex;
+          useLetters = true
+          const letterIndex = letter.charCodeAt(0) - 65
+          if (letterIndex > highestIndex) highestIndex = letterIndex
         }
       }
-    });
-  
+    })
+
     // Determine base name (remove any trailing numbers/letters)
-    let baseName = editFormData.platformName.trim();
+    let baseName = editFormData.platformName.trim()
     if (useLetters) {
-      baseName = baseName.replace(/[A-Za-z]$/, '');
+      baseName = baseName.replace(/[A-Za-z]$/, "")
     } else {
-      baseName = baseName.replace(/\d+$/, '');
+      baseName = baseName.replace(/\d+$/, "")
     }
-  
+
     // Create new court name
-    const newIndex = highestIndex + 1;
-    const newCourtName = useLetters 
-      ? `${baseName}${String.fromCharCode(65 + newIndex)}`
-      : `${baseName}${newIndex}`;
-  
+    const newIndex = highestIndex + 1
+    const newCourtName = useLetters ? `${baseName}${String.fromCharCode(65 + newIndex)}` : `${baseName}${newIndex}`
+
     // Create new court with default settings
     const newCourt: CourtSettings = {
       name: newCourtName,
-      peakHours: [...editFormData.peakHours.map(peak => ({
-        id: crypto.randomUUID(),
-        start: peak.startTime ? dayjs(peak.startTime).format("HH:mm") : null,
-        end: peak.endTime ? dayjs(peak.endTime).format("HH:mm") : null,
-        fee: Number.parseFloat(peak.fee) || 0
-      }))],
+      peakHours: [
+        ...editFormData.peakHours.map((peak) => ({
+          id: crypto.randomUUID(),
+          start: peak.startTime ? dayjs(peak.startTime).format("HH:mm") : null,
+          end: peak.endTime ? dayjs(peak.endTime).format("HH:mm") : null,
+          fee: Number.parseFloat(peak.fee) || 0,
+        })),
+      ],
       fees: {
-        regular: Number.parseFloat(editFormData.regularFee) || 0
+        regular: Number.parseFloat(editFormData.regularFee) || 0,
       },
-      availability: true
-    };
-  
+      availability: true,
+    }
+
     // Add new court
-    setCourtData([...courtData, newCourt]);
-    handleEditInputChange("platformCount", (courtData.length + 1).toString());
-  };
+    setCourtData([...courtData, newCourt])
+    handleEditInputChange("platformCount", (courtData.length + 1).toString())
+  }
+
+  const handleEndTimeChange = (time: any) => {
+    if (editFormData.startTime && time) {
+      const startTime = dayjs(editFormData.startTime)
+
+      if (time.isBefore(startTime)) {
+        notify("End time cannot be before start time", false)
+        return
+      }
+    }
+    handleEditInputChange("endTime", time)
+  }
+
   return (
     <div className="w-full bg-white p-4 ">
       <Toaster />
@@ -855,29 +940,31 @@ export default function EditSportPage({
                   onChange={(time) => handleEditInputChange("startTime", time)}
                 />
                 <span className="text-gray-500">to</span>
+                {/* Also add validation to the Platform Timing section */}
+                {/* Find the Platform Timing section and update the endTime TimePicker */}
                 <TimePicker
                   value={editFormData.endTime ? dayjs(editFormData.endTime) : null}
                   use12Hours={timeFormat === "12 hours"}
                   format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm"}
                   placeholder="End"
                   className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                  onChange={(time) => handleEditInputChange("endTime", time)}
+                  onChange={handleEndTimeChange}
                 />
               </div>
             </div>
             <div className="flex gap-4">
-                <div className="flex-1 space-y-2">
-                  <Label className="text-gray-900 text-sm font-medium">Regular Fee</Label>
-                  <input
-                    type="number"
-                    placeholder="12.99"
-                    className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
-                    value={editFormData.regularFee}
-                    onChange={(e) => handleEditInputChange("regularFee", e.target.value)}
-                    min={0}
-                  />
-                </div>
+              <div className="flex-1 space-y-2">
+                <Label className="text-gray-900 text-sm font-medium">Regular Fee</Label>
+                <input
+                  type="number"
+                  placeholder="12.99"
+                  className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
+                  value={editFormData.regularFee}
+                  onChange={(e) => handleEditInputChange("regularFee", e.target.value)}
+                  min={0}
+                />
               </div>
+            </div>
             {/* <div className="flex-1 space-y-2">
               <Label className="text-gray-900 text-sm font-medium">Non Peak Hours</Label>
               <div className="flex items-center gap-2">
@@ -904,7 +991,6 @@ export default function EditSportPage({
 
           <div className="flex gap-4">
             {/* Fees Section */}
-            
 
             <div className="flex-1 space-y-2">
               <Label className="text-gray-900 text-sm font-medium">Active Days</Label>
@@ -1018,7 +1104,7 @@ export default function EditSportPage({
                         rowData.peakHours.map((peak, peakIndex) => (
                           <div key={peak.id} className="flex items-center gap-2">
                             <TimePicker
-                              value={peak.start ? dayjs(peak.start, "HH:mm") : null}
+                              value={peak.start ? dayjs(peak.start) : null}
                               use12Hours={timeFormat === "12 hours"}
                               format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
                               onChange={(time) =>
@@ -1030,7 +1116,7 @@ export default function EditSportPage({
                             />
                             <span>-</span>
                             <TimePicker
-                              value={peak.end ? dayjs(peak.end, "HH:mm") : null}
+                              value={peak.end ? dayjs(peak.end) : null}
                               use12Hours={timeFormat === "12 hours"}
                               format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
                               onChange={(time) =>
@@ -1110,24 +1196,16 @@ export default function EditSportPage({
                           />
                         </div>
                       )}
-                    </div>
-                  )}
-                </Cell>
-              </Column>
-
-              <Column width={80} align="left" fixed="right">
-                <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>ADD PEAK</HeaderCell>
-                <Cell>
-                  {(rowData: RowDataType, index?: number) => (
-                    <div className="flex justify-center">
-                      <button
-                        type="button"
-                        onClick={() => index !== undefined && addPeakHour(index)}
-                        className="flex  justify-center text-teal-800 hover:text-teal-700"
-                        disabled={!rowData?.availability}
-                      >
-                        <Plus size={16} />
-                      </button>
+                      <div className="flex justify-start">
+                        <button
+                          type="button"
+                          onClick={() => index !== undefined && addPeakHour(index)}
+                          className="flex justify-center text-teal-800 hover:text-teal-700"
+                          disabled={!rowData?.availability}
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
                     </div>
                   )}
                 </Cell>
