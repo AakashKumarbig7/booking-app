@@ -84,8 +84,8 @@ interface CourtsData {
     name: string
     peakHours: Array<{
       id: string
-      start: string | null
-      end: string | null
+      start: string | null | Dayjs
+      end: string | null | Dayjs
       fee: number
     }>
     // nonPeakHours: {
@@ -301,12 +301,12 @@ export default function EditSportPage({
             const courtDataArray = sportToEdit.courts.map((courtName: string) => {
               const courtSettings = {
                 name: courtName,
-                peakHours: sportToEdit.peakHours?.map((item: any) => {
+                peakHours: sportToEdit.courtsData[courtName].peakHours?.map((item: any) => {
                   return {
                     ...item,
                     id: crypto.randomUUID(),
-                    start: dayjs(item.start, "HH:mm a"),
-                    end: dayjs(item.end, "HH:mm a"),
+                    start:item.start,
+                    end: item.end,
                   }
                 }),
                 // nonPeakHours: sportToEdit.nonPeakHours || {
@@ -333,8 +333,8 @@ export default function EditSportPage({
                 : [
                   {
                     id: crypto.randomUUID(),
-                    start: dayjs(sportToEdit.peakHours?.start, "HH:mm a") || null,
-                    end: dayjs(sportToEdit.peakHours?.end, "HH:mm a") || null,
+                    start: sportToEdit.peakHours?.start|| null,
+                    end: sportToEdit.peakHours?.end || null,
                     fee: sportToEdit.fees?.peak || 0,
                   },
                 ],
@@ -448,8 +448,8 @@ export default function EditSportPage({
       // Create default values for peak hours and fees
       const defaultPeakHours = editFormData.peakHours.map((peak) => ({
         id: peak.id, // Include the id property
-        start: peak.startTime ? dayjs(peak.startTime).format("HH:mm") : null,
-        end: peak.endTime ? dayjs(peak.endTime).format("HH:mm") : null,
+        start: peak.startTime ? dayjs(peak.startTime).format("h:mm a") : null,
+        end: peak.endTime ? dayjs(peak.endTime).format("h:mm a") : null,
         fee: Number.parseFloat(peak.fee) || 0,
       }))
 
@@ -498,8 +498,8 @@ export default function EditSportPage({
             status: editFormData.sportStatus,
             courts: courtNames,
             timing: {
-              start: editFormData.startTime ? dayjs(editFormData.startTime).format("HH:mm") : null,
-              end: editFormData.endTime ? dayjs(editFormData.endTime).format("HH:mm") : null,
+              start: editFormData.startTime ? dayjs(editFormData.startTime).format("h:mm a") : null,
+              end: editFormData.endTime ? dayjs(editFormData.endTime).format("h:mm a") : null,
             },
             // nonPeakHours: {
             //   start: editFormData.nonPeakStartTime ? dayjs(editFormData.nonPeakStartTime).format("HH:mm") : null,
@@ -617,7 +617,6 @@ export default function EditSportPage({
 
   // In the handlePeakHourChange function, add validation to ensure peak hours are within platform timing
   const handlePeakHourChange = (id: string, field: string, value: any, courtIndex?: number) => {
-    debugger
     // For validation checks
     const validateTimeValue = (value: any, fieldType: string, peakId: string, courtIdx?: number) => {
       // Get platform start and end times
@@ -675,9 +674,9 @@ export default function EditSportPage({
             newData[courtIndex].peakHours = newData[courtIndex].peakHours.map((hour) => {
               if (hour.id === id) {
                 if (field === "start") {
-                  return { ...hour, start: value ? value : null }
+                  return { ...hour, start: value ? dayjs(value).format('h:mm a') : null }
                 } else if (field === "end") {
-                  return { ...hour, end: value ? value : null }
+                  return { ...hour, end: value ? dayjs(value).format('h:mm a') : null }
                 }
               }
               return hour
@@ -767,8 +766,8 @@ export default function EditSportPage({
       peakHours: [
         ...editFormData.peakHours.map((peak) => ({
           id: crypto.randomUUID(),
-          start: peak.startTime ? dayjs(peak.startTime).format("HH:mm") : null,
-          end: peak.endTime ? dayjs(peak.endTime).format("HH:mm") : null,
+          start: peak.startTime ? dayjs(peak.startTime).format("h:mm a") : null,
+          end: peak.endTime ? dayjs(peak.endTime).format("h:mm a") : null,
           fee: Number.parseFloat(peak.fee) || 0,
         })),
       ],
@@ -929,9 +928,9 @@ export default function EditSportPage({
               <Label className="text-gray-900 text-sm font-medium">Platform Timing</Label>
               <div className="flex items-center gap-2">
                 <TimePicker
-                  value={editFormData.startTime ? dayjs(editFormData.startTime) : null}
+                  value={editFormData.startTime ? dayjs(editFormData.startTime,'h:mm a') : null}
                   use12Hours={timeFormat === "12 hours"}
-                  format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm"}
+                  format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm"}
                   placeholder="Start"
                   className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                   onChange={(time) => handleEditInputChange("startTime", time)}
@@ -940,9 +939,9 @@ export default function EditSportPage({
                 {/* Also add validation to the Platform Timing section */}
                 {/* Find the Platform Timing section and update the endTime TimePicker */}
                 <TimePicker
-                  value={editFormData.endTime ? dayjs(editFormData.endTime) : null}
+                  value={editFormData.endTime ? dayjs(editFormData.endTime,'h:mm a') : null}
                   use12Hours={timeFormat === "12 hours"}
-                  format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm"}
+                  format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm"}
                   placeholder="End"
                   className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                   onChange={handleEndTimeChange}
@@ -1098,12 +1097,17 @@ export default function EditSportPage({
                   {(rowData: RowDataType, index?: number) => (
                     <div className="flex flex-col gap-4 max-h-[150px] overflow-y-auto pr-2">
                       {Array.isArray(rowData.peakHours) ? (
-                        rowData.peakHours.map((peak, peakIndex) => (
+                       
+                        rowData.peakHours.map((peak, peakIndex) => {
+                          console.log(rowData)
+                          return(
+                
                           <div key={peak.id} className="flex items-center gap-2">
+                      
                             <TimePicker
-                              value={peak.start ? dayjs(peak.start) : null}
+                              value={peak.start ? dayjs(peak.start,'h:mm a') : null}
                               use12Hours={timeFormat === "12 hours"}
-                              format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
+                              format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm A"}
                               onChange={(time) =>
                                 index !== undefined && handlePeakHourChange(peak.id, "start", time, index)
                               }
@@ -1113,9 +1117,9 @@ export default function EditSportPage({
                             />
                             <span>-</span>
                             <TimePicker
-                              value={peak.end ? dayjs(peak.end) : null}
+                              value={peak.end ? dayjs(peak.end,'h:mm a') : null}
                               use12Hours={timeFormat === "12 hours"}
-                              format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
+                              format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm A"}
                               onChange={(time) =>
                                 index !== undefined && handlePeakHourChange(peak.id, "end", time, index)
                               }
@@ -1164,13 +1168,14 @@ export default function EditSportPage({
                               </AlertDialog>
                             )}
                           </div>
-                        ))
+                        )
+                        })
                       ) : (
                         <div className="flex items-center gap-2">
                           <TimePicker
                             value={null}
                             use12Hours={timeFormat === "12 hours"}
-                            format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
+                            format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm A"}
                             className="!border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                             disabled={!rowData?.availability}
                             placeholder="Start"
@@ -1179,7 +1184,7 @@ export default function EditSportPage({
                           <TimePicker
                             value={null}
                             use12Hours={timeFormat === "12 hours"}
-                            format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm A"}
+                            format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm A"}
                             className="!border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                             disabled={!rowData?.availability}
                             placeholder="End"
