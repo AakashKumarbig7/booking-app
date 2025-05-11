@@ -617,11 +617,12 @@ export default function EditSportPage({
 
   // In the handlePeakHourChange function, add validation to ensure peak hours are within platform timing
   const handlePeakHourChange = (id: string, field: string, value: any, courtIndex?: number) => {
+    debugger
     // For validation checks
     const validateTimeValue = (value: any, fieldType: string, peakId: string, courtIdx?: number) => {
       // Get platform start and end times
-      const platformStart = editFormData.startTime ? dayjs(editFormData.startTime).format("HH:mm") : null
-      const platformEnd = editFormData.endTime ? dayjs(editFormData.endTime).format("HH:mm") : null
+      const platformStart = editFormData.startTime ? dayjs(editFormData.startTime, "HH:mm a") : null
+      const platformEnd = editFormData.endTime ? dayjs(editFormData.endTime, "HH:mm a") : null
 
       // If platform times are set, validate the peak hour time
       if (platformStart && platformEnd && value) {
@@ -643,12 +644,12 @@ export default function EditSportPage({
         if (courtIdx !== undefined) {
           const peakHour = courtData[courtIdx]?.peakHours.find((hour) => hour.id === peakId)
           if (peakHour?.start) {
-            startTime = dayjs(peakHour.start, "HH:mm")
+            startTime = dayjs(peakHour.start, "HH:mm a")
           }
         } else {
           const peakHour = editFormData.peakHours.find((hour) => hour.id === peakId)
           if (peakHour?.startTime) {
-            startTime = dayjs(peakHour.startTime)
+            startTime =dayjs(peakHour.startTime, "HH:mm a")
           }
         }
 
@@ -674,9 +675,9 @@ export default function EditSportPage({
             newData[courtIndex].peakHours = newData[courtIndex].peakHours.map((hour) => {
               if (hour.id === id) {
                 if (field === "start") {
-                  return { ...hour, start: value ? value.format("HH:mm") : null }
+                  return { ...hour, start: value ? value : null }
                 } else if (field === "end") {
-                  return { ...hour, end: value ? value.format("HH:mm") : null }
+                  return { ...hour, end: value ? value : null }
                 }
               }
               return hour
