@@ -293,7 +293,7 @@ export default function SportsManagementPage() {
         if (value.isBefore(platformStart) || value.isAfter(platformEnd)) {
           // Show error toast - make sure this is called
           notify(
-            `Peak hours must be within platform timing (${platformStart.format("h:mm A")} - ${platformEnd.format("h:mm A")})`,
+            `Peak hours must be within platform timing (${platformStart.format("h:mm a")} - ${platformEnd.format("h:mm a")})`,
             false,
           )
           return false
@@ -442,7 +442,7 @@ export default function SportsManagementPage() {
             : null,
         },
         peakHours: formData.peakHours.map((peak) => ({
-          start: peak.startTime ? dayjs(peak.startTime).format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm") : null,
+          start: peak.startTime ? dayjs(peak.startTime).format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm") : null,
           end: peak.endTime ? dayjs(peak.endTime).format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm") : null,
           fee: Number.parseFloat(peak.fee) || 0,
         })),

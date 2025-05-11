@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch"
 import { Trash2, Search, FilePlus, Plus } from "lucide-react"
 import { Table } from "rsuite"
 import type { RowDataType } from "rsuite/esm/Table"
-import dayjs from "dayjs"
+import dayjs, { Dayjs } from "dayjs"
 import { useGlobalContext } from "@/context/store"
 import { createClient } from "@/utils/supabase/client"
 import { Input } from "@/components/ui/input"
@@ -145,8 +145,8 @@ export default function EditSportPage({
     sportName: string
     icon: string
     sportStatus: string
-    startTime: Date | null
-    endTime: Date | null
+    startTime: Date | null | Dayjs
+    endTime: Date | null | Dayjs
     // nonPeakStartTime: Date | null
     // nonPeakEndTime: Date | null
     peakHours: Array<{
@@ -249,21 +249,21 @@ export default function EditSportPage({
             // Convert the peak hours array from the database to the form structure
             const peakHoursArray = Array.isArray(sportToEdit.peakHours)
               ? sportToEdit.peakHours.map((peak: any) => ({
-                  id: crypto.randomUUID(),
-                  startTime: peak.start ? dayjs(peak.start,"HH:mm") : null,
-                  endTime: peak.end ? dayjs(peak.end, "HH:mm").toDate() : null,
-                  fee: peak.fee?.toString() || "",
-                }))
+                id: crypto.randomUUID(),
+                startTime: peak.start ? dayjs(peak.start, "HH:mm a") : null,
+                endTime: peak.end ? dayjs(peak.end, "HH:mm a") : null,
+                fee: peak.fee?.toString() || "",
+              }))
               : [
-                  {
-                    id: crypto.randomUUID(),
-                    startTime: sportToEdit.peakHours?.start
-                      ? dayjs(sportToEdit.peakHours.start, "HH:mm").format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm")
-                      : null,
-                    endTime: sportToEdit.peakHours?.end ? dayjs(sportToEdit.peakHours.end, "HH:mm").format(timeFormat === "12 hours" ? "h:mm a" : "HH:mm") : null,
-                    fee: sportToEdit.fees?.peak?.toString() || "",
-                  },
-                ]
+                {
+                  id: crypto.randomUUID(),
+                  startTime: sportToEdit.peakHours?.start
+                    ? dayjs(sportToEdit.peakHours.start, "HH:mm a")
+                    : null,
+                  endTime: sportToEdit.peakHours?.end ? dayjs(sportToEdit.peakHours.end, "HH:mm a") : null,
+                  fee: sportToEdit.fees?.peak?.toString() || "",
+                },
+              ]
 
             setEditFormData({
               sportName: sportToEdit.sportName,
@@ -271,8 +271,8 @@ export default function EditSportPage({
               platformName: sportToEdit.courts[0] || "",
               icon: sportToEdit.icon,
               sportStatus: sportToEdit.status,
-              startTime: sportToEdit.timing.start ? dayjs(sportToEdit.timing.start, "HH:mm").toDate() : null,
-              endTime: sportToEdit.timing.end ? dayjs(sportToEdit.timing.end, "HH:mm").toDate() : null,
+              startTime: sportToEdit.timing.start ? dayjs(sportToEdit.timing.start, "HH:mm a") : null,
+              endTime: sportToEdit.timing.end ? dayjs(sportToEdit.timing.end, "HH:mm a") : null,
               // nonPeakStartTime: sportToEdit.nonPeakHours?.start
               //   ? dayjs(sportToEdit.nonPeakHours.start, "HH:mm").toDate()
               //   : null,
@@ -299,18 +299,16 @@ export default function EditSportPage({
           // 5. Update the court data creation to include thirdPeakHours
           if (sportToEdit.courtsData && Object.keys(sportToEdit.courtsData).length > 0) {
             const courtDataArray = sportToEdit.courts.map((courtName: string) => {
-              const courtSettings = sportToEdit.courtsData?.[courtName] || {
+              const courtSettings = {
                 name: courtName,
-                peakHours: Array.isArray(sportToEdit.peakHours)
-                  ? sportToEdit.peakHours
-                  : [
-                      {
-                        id: crypto.randomUUID(),
-                        start: sportToEdit.peakHours?.start || null,
-                        end: sportToEdit.peakHours?.end || null,
-                        fee: sportToEdit.fees?.peak || 0,
-                      },
-                    ],
+                peakHours: sportToEdit.peakHours?.map((item: any) => {
+                  return {
+                    ...item,
+                    id: crypto.randomUUID(),
+                    start: dayjs(item.start, "HH:mm a"),
+                    end: dayjs(item.end, "HH:mm a"),
+                  }
+                }),
                 // nonPeakHours: sportToEdit.nonPeakHours || {
                 //   start: null,
                 //   end: null,
@@ -322,11 +320,9 @@ export default function EditSportPage({
               }
 
               return {
-                name: courtName,
                 ...courtSettings,
               }
             })
-
             setCourtData(courtDataArray)
           } else {
             // Create default court data if courtsData doesn't exist
@@ -335,13 +331,13 @@ export default function EditSportPage({
               peakHours: Array.isArray(sportToEdit.peakHours)
                 ? sportToEdit.peakHours
                 : [
-                    {
-                      id: crypto.randomUUID(),
-                      start: sportToEdit.peakHours?.start || null,
-                      end: sportToEdit.peakHours?.end || null,
-                      fee: sportToEdit.fees?.peak || 0,
-                    },
-                  ],
+                  {
+                    id: crypto.randomUUID(),
+                    start: dayjs(sportToEdit.peakHours?.start, "HH:mm a") || null,
+                    end: dayjs(sportToEdit.peakHours?.end, "HH:mm a") || null,
+                    fee: sportToEdit.fees?.peak || 0,
+                  },
+                ],
               // nonPeakHours: sportToEdit.nonPeakHours || {
               //   start: null,
               //   end: null,
