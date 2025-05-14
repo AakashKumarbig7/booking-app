@@ -76,7 +76,7 @@ export default function SignUp() {
     const isFormValid = isCapitalLetter && hasValidLength && hasSpecialChar && noSpaces;
     const isPasswordMatch = password === confirmPassword;
 
-    const renderIcon = (condition:any) =>
+    const renderIcon = (condition:boolean) =>
       condition ? <CheckCircle className="text-green-500 inline ml-2" size={14} /> : <TriangleAlert className="text-red-500 inline ml-2" size={16}/>;
 
   return (

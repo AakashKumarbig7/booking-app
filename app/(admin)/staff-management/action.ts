@@ -17,7 +17,7 @@ export async function createUser1(email : string, password : string) {
         return {error : authError};
       }
 
-      return{data : authData as any};
+      return{data : authData};
 
 }
 

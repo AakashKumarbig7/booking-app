@@ -6,8 +6,8 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 
 export async function confirmReset(formData: FormData): Promise<void> {
-  const supabase = createClient();
-  const origin = headers().get('origin');
+  const supabase = await createClient();
+  const origin = (await headers()).get('origin');
   const email = formData.get('email') as string;
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {

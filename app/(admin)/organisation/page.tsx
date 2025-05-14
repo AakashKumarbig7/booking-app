@@ -26,6 +26,18 @@ type Day =
   | "Friday"
   | "Saturday"
   | "Sunday";
+  type CountryAPIResponse = {
+    name?: {
+      common?: string;
+    };
+    currencies?: {
+      [code: string]: {
+        name: string;
+        symbol?: string;
+      };
+    };
+  };
+  
 
 const notify = (message: string, success: boolean) =>
   toast[success ? "success" : "error"](message, {
@@ -41,11 +53,11 @@ const notify = (message: string, success: boolean) =>
 const Organisation = () => {
   const {user: currentUser} = useGlobalContext()
   const supabase = createClient();
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
   const [timezone, setTimezone] = useState(
     "(+11:00) Australian Eastern Daylight Time (Australia/Melbourne)"
   );
-  const [user, setUser] = useState<any>();
+  // const [user, setUser] = useState<any>();
   const [companyName, setCompanyName] = useState("");
   const [previousName, setPreviousName] = useState("");
   const [businessType, setBusinessType] = useState("");
@@ -67,7 +79,7 @@ const Organisation = () => {
     "Saturday",
     "Sunday",
   ]);
-  const [data, setData] = useState<any[]>();
+  // const [data, setData] = useState<any[]>();
   const [workingTime, setWorkingTime] = useState<
     Record<Day, { status: boolean; from: string; to: string; day: string }>
   >({
@@ -89,7 +101,8 @@ const Organisation = () => {
     },
     Sunday: { status: false, from: "9:00 AM", to: "5:00 PM", day: "Sunday" },
   });
-
+  const [saveLoader, setSaveLoader] = useState(false);
+  // const [cancelLoader, setCancelLoader] = useState(false);
   // Validate working hours
   const validateWorkingHours = () => {
     const errors: string[] = [];
@@ -133,25 +146,26 @@ const Organisation = () => {
   }
 
   useEffect(() => {
-    fetchData().then(() => setLoading(false));
-
+    fetchData();
+  
     fetch("https://restcountries.com/v3.1/all")
       .then((res) => res.json())
-      .then((data) => {
+      .then((data: CountryAPIResponse[]) => {
         if (Array.isArray(data)) {
-          // Get countries
+          // Extract country names
           const countryNames = data
-            .map((country: any) => country?.name?.common)
-            .filter(Boolean)
-            .sort((a: string, b: string) => a.localeCompare(b));
+            .map((country) => country?.name?.common)
+            .filter((name): name is string => Boolean(name))
+            .sort((a, b) => a.localeCompare(b));
+  
           setCountriesList(countryNames);
-
-          // Get unique currencies
+  
+          // Extract unique currencies
           const currencySet = new Set<string>();
-          data.forEach((country: any) => {
+          data.forEach((country) => {
             if (country.currencies) {
               Object.entries(country.currencies).forEach(
-                ([code, currencyData]: [string, any]) => {
+                ([code, currencyData]) => {
                   const symbol = currencyData.symbol || code;
                   const name = currencyData.name;
                   if (name) {
@@ -161,7 +175,7 @@ const Organisation = () => {
               );
             }
           });
-
+  
           const sortedCurrencies = Array.from(currencySet).sort();
           setCurrenciesList(sortedCurrencies);
         }
@@ -171,7 +185,7 @@ const Organisation = () => {
         setCountriesList([]);
         setCurrenciesList([]);
       });
-
+  
     const usersChannel = supabase
       .channel("custom-all-channel-users")
       .on(
@@ -183,7 +197,7 @@ const Organisation = () => {
         }
       )
       .subscribe();
-
+  
     const companiesChannel = supabase
       .channel("custom-all-channel-companies")
       .on(
@@ -195,7 +209,7 @@ const Organisation = () => {
         }
       )
       .subscribe();
-
+  
     return () => {
       supabase.removeChannel(usersChannel);
       supabase.removeChannel(companiesChannel);
@@ -203,6 +217,8 @@ const Organisation = () => {
   }, [currentUser]);
 
   async function fetchData() {
+    // setLoading(true);
+
     const { data: user } = await supabase.auth.getUser();
 console.log("user",user)
     if (!user?.user?.email) return;
@@ -215,25 +231,25 @@ console.log("user",user)
       .eq("store_admin", user.user.email)
       .single();
 
-    setUser(user.user);
+    // setUser(user.user);
     
 
     if (company) {
-      const AllData = {
-        companyName: company.company_name,
-        businessType: company.business_type,
-        timezone: company.timezone,
-        country: company.country,
-        currency: company.currency,
-        language: company.language,
-        dateFormat: company.date_format,
-        timeFormat: company.time_format,
-        weekStartDay: company.week_start_day,
-        companyDays: getSortedDays(company.week_start_day),
-        workingTime: company.working_time,
-      };
+      // const AllData = {
+      //   companyName: company.company_name,
+      //   businessType: company.business_type,
+      //   timezone: company.timezone,
+      //   country: company.country,
+      //   currency: company.currency,
+      //   language: company.language,
+      //   dateFormat: company.date_format,
+      //   timeFormat: company.time_format,
+      //   weekStartDay: company.week_start_day,
+      //   companyDays: getSortedDays(company.week_start_day),
+      //   workingTime: company.working_time,
+      // };
 
-      setData(AllData as any);
+      // setData(AllData as any);
       setCompanyName(company.company_name);
       setPreviousName(company.company_name);
       setBusinessType(company.business_type);
@@ -247,9 +263,11 @@ console.log("user",user)
       setCompanyDays(getSortedDays(company.week_start_day));
       setWorkingTime(company.working_time);
     }
+    // setLoading(false);
   }
 
   async function handleSave() {
+    setSaveLoader(true);
     console.log("function eneterd")
     // Validate working hours before saving
     const validationErrors = validateWorkingHours();
@@ -291,13 +309,17 @@ console.log("user",user)
 
     if (companyUpdateError) {
       notify("Error updating company details", false);
+      setSaveLoader(false);
     } else {
       notify("Company details updated successfully", true);
+      setSaveLoader(false);
       fetchData();
     }
   }
 
   return (
+    
+   
     <div className="w-full bg-white p-4 ">
       <Toaster />
       <div className="px-4 ">
@@ -308,6 +330,8 @@ console.log("user",user)
             branding, all in one place.
           </p>
         </div>
+        
+        
         <div className="mt-4">
           <Tabs defaultValue="companySetting" className="w-full">
             <TabsList className="w-fit">
@@ -385,7 +409,7 @@ console.log("user",user)
                       </SelectTrigger>
                       <SelectContent className="bg-white rounded-md shadow-md max-h-60 overflow-y-auto">
                         <SelectGroup>
-                          {countriesList.map((c: any) => (
+                          {countriesList.map((c: string) => (
                             <SelectItem key={c} value={c}>
                               {c}
                             </SelectItem>
@@ -645,7 +669,7 @@ console.log("user",user)
                                   ? dayjs(workingTime[day]?.to, "hh:mm A")
                                   : null
                               }
-                              onChange={(time: any) =>
+                              onChange={(time) =>
                                 setWorkingTime((prev) => ({
                                   ...prev,
                                   [day]: {
@@ -673,14 +697,64 @@ console.log("user",user)
                 </div>
               </div>
               <div className="w-full flex justify-end mt-7 border border-bgborder_color rounded-[6px] bg-white p-2 gap-2">
-                <button className="px-8 py-2 text-xs border border-gray-200 rounded-[6px] text-gray-800">
-                  Cancel
+                <button className="px-8 py-2 text-xs border border-gray-200 rounded-[6px] text-gray-800"
+                // disabled={cancelLoader}
+                >
+                {/* {cancelLoader ? (
+                        <svg
+                          className="animate-spin h-6 w-6"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="#1A56DB"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-100"
+                            fill="#1A56DB"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                      ) : (
+                        "Cancel"
+                      )} */}
+                  
                 </button>
                 <button
                   className="px-8 py-2 text-xs border border-gray-200 rounded-[6px] bg-teal-800 text-white hover:bg-teal-700"
                   onClick={handleSave}
+                  disabled={saveLoader}
                 >
-                  Save
+                  {saveLoader ? (
+                        <svg
+                          className="animate-spin h-5 w-5"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="#fff"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="#fff"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                      ) : (
+                        "Save"
+                      )}
                 </button>
               </div>
             </TabsContent>
@@ -691,6 +765,7 @@ console.log("user",user)
         </div>
       </div>
     </div>
+  
   );
 };
 

@@ -19,6 +19,7 @@ import EmployeeForm from "./empForm"
 import EmployeeTable from "./empTable"
 import toast, { Toaster } from "react-hot-toast"
 
+
 interface Employee {
   employee_id?: string
   email: string
@@ -65,9 +66,9 @@ const EmployeeAdd = () => {
   const [openEdit, setOpenEdit] = useState(false)
   const [openDelete, setOpenDelete] = useState(false)
   const [employees, setEmployees] = useState<Employee[]>([])
-  const [loading, setLoading] = useState(true)
+  // const [loading, setLoading] = useState(true)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  // const [currentUser, setCurrentUser] = useState<any>(null)
 
   // Form state
   const [formData, setFormData] = useState<Employee>({
@@ -99,17 +100,17 @@ const EmployeeAdd = () => {
   }, [])
 
   const fetchData = async () => {
-    setLoading(true)
+    // setLoading(true)
 
     // Get current authenticated user
     const { data: userData } = await supabase.auth.getUser()
 
     if (!userData?.user?.email) {
-      setLoading(false)
+      // setLoading(false)
       return
     }
 
-    setCurrentUser(userData.user)
+    // setCurrentUser(userData.user)
 
     // Fetch employees from the users table
     const { data, error } = await supabase.from("users").select("*")
@@ -120,7 +121,7 @@ const EmployeeAdd = () => {
       setEmployees(data)
     }
 
-    setLoading(false)
+    // setLoading(false)
   }
 
   const handleInputChange = (id: string, value: string) => {
@@ -162,12 +163,33 @@ const EmployeeAdd = () => {
     // Format mobile numbers by removing spaces for database
     const formattedData = {
       ...formData,
+
       mobile: formData.mobile.replace(/\s+/g, ""),
       emergency_mobile: formData.emergency_mobile.replace(/\s+/g, ""),
     }
 
     // Insert new employee
-    const { data, error } = await supabase.from("users").insert([formattedData]).select()
+    const {  error } = await supabase.from("users")
+    .insert( {
+      employee_id: formattedData.employee_id,
+      password: formattedData.password,
+      first_name: formattedData.first_name,
+      last_name: formattedData.last_name,
+      email: formattedData.email,
+      mobile: formattedData.mobile,
+      joined_date: formattedData.joined_date,
+      designation: formattedData.designation,
+      blood_group: formattedData.blood_group,
+      address: formattedData.address,
+      city: formattedData.city,
+      state: formattedData.state,
+      country: formattedData.country,
+      zipcode: formattedData.zipcode,  
+      emergency_mobile: formattedData.emergency_mobile,
+      emp_id: formattedData.emp_id,
+      role: formattedData.role,
+    })
+    .select()
 
     if (error) {
       console.error("Failed to add employee:", error.message)
@@ -300,16 +322,18 @@ emergency_mobile: (formData.emergency_mobile || "").toString().replace(/\s+/g, "
           <EmployeeForm formData={formData} handleInputChange={handleInputChange} ref={formRef} />
 
           {/* Footer: Save & Cancel */}
+         
           <div className="mt-3 pt-3 flex  gap-2 px-3 pb-2">
-            <Button variant="outline" onClick={() => setOpenAdd(false)}>
-              Cancel
-            </Button>
-            <div
+          <div
               className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] w-[100px] h-[40px] flex items-center justify-center text-xs cursor-pointer"
               onClick={handleAddEmployee}
             >
               Save
             </div>
+            <Button variant="outline" onClick={() => setOpenAdd(false)}>
+              Cancel
+            </Button>
+           
           </div>
         </SheetContent>
       </Sheet>
@@ -321,7 +345,9 @@ emergency_mobile: (formData.emergency_mobile || "").toString().replace(/\s+/g, "
             <SheetTitle className="text-gray-600 text-sm -mt-1 uppercase overflow-hidden">Edit Employee</SheetTitle>
           </SheetHeader>
 
-          <EmployeeForm formData={formData} handleInputChange={handleInputChange} isEdit={true} ref={formRef} />
+          <EmployeeForm formData={formData} handleInputChange={handleInputChange} 
+          // isEdit={true} 
+          ref={formRef} />
 
           {/* Footer: Save & Cancel */}
           <div className="mt-3 pt-3 flex  gap-2 px-3 pb-2">
@@ -358,7 +384,7 @@ emergency_mobile: (formData.emergency_mobile || "").toString().replace(/\s+/g, "
       {/* Employee Table */}
       <EmployeeTable
         employees={employees}
-        loading={loading}
+        // loading={loading}
         onEditClick={handleEditClick}
         onDeleteClick={handleDeleteClick}
       />

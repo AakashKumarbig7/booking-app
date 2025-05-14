@@ -31,7 +31,7 @@ interface Employee {
 interface EmployeeFormProps {
   formData: Employee
   handleInputChange: (id: string, value: string) => void
-  isEdit?: boolean
+  // isEdit?: boolean
 }
 
 interface ValidationErrors {
@@ -46,10 +46,13 @@ const COUNTRY_CODES = [
 ];
 
 const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: ValidationErrors }, EmployeeFormProps>(
-  ({ formData, handleInputChange, isEdit = false }, ref) => {
+  ({ formData, handleInputChange, 
+    // isEdit = false 
+  }
+    , ref) => {
     const [errors, setErrors] = useState<ValidationErrors>({})
 
-    const validateField = (fieldId: string, value: any): string | undefined => {
+    const validateField = (fieldId: string, value: string | number): string | undefined => {
       const stringValue = String(value || "");
       
       switch (fieldId) {

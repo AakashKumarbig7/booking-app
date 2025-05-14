@@ -55,7 +55,7 @@ export default function RoleSelector({ value, onChange, error }: RoleSelectorPro
 
         if (!existingRole) {
           // Use the rpc function to insert the role (bypassing RLS)
-          const { data, error } = await supabase.rpc("add_role", { role_name: roleName })
+          const {  error } = await supabase.rpc("add_role", { role_name: roleName })
 
           if (error) {
             console.error("Error adding new role:", error)
@@ -138,7 +138,7 @@ export default function RoleSelector({ value, onChange, error }: RoleSelectorPro
                     className="p-2 hover:bg-accent hover:text-accent-foreground cursor-pointer text-sm"
                     onClick={() => handleRoleSelect(inputValue)}
                   >
-                    Use "{inputValue}"
+                     {`Use "${inputValue}"`}
                   </div>
                 )}
               </>

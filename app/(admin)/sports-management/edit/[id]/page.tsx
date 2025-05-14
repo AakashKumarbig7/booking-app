@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import type React from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TimePicker } from "antd"
@@ -8,15 +9,14 @@ import { Switch } from "@/components/ui/switch"
 import { Trash2, Search, FilePlus, Plus } from "lucide-react"
 import { Table } from "rsuite"
 import type { RowDataType } from "rsuite/esm/Table"
-import dayjs, { Dayjs } from "dayjs"
+import dayjs, { type Dayjs } from "dayjs"
 import { useGlobalContext } from "@/context/store"
 import { createClient } from "@/utils/supabase/client"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import toast, { Toaster } from "react-hot-toast"
-import "@/app/(admin)/sports-management/edit/[id]/style.css" // Import your global CSS file
-// Add import for sport icons
+import "@/app/(admin)/sports-management/edit/[id]/style.css"
 import { getSportIcon } from "@/components/sport-icons"
 import {
   AlertDialog,
@@ -29,6 +29,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { use } from "react"
 
 interface CourtSettings {
   name: string
@@ -38,10 +40,6 @@ interface CourtSettings {
     end: string | null
     fee: number
   }>
-  // nonPeakHours: {
-  //   start: string | null
-  //   end: string | null
-  // }
   fees: {
     regular: number
   }
@@ -51,7 +49,7 @@ interface CourtSettings {
 interface SportData {
   id: number
   icon: string
-  sportName: string
+  sport_name: string
   courts: string[]
   availability: boolean
   platform_count: number
@@ -63,10 +61,6 @@ interface SportData {
     [key: string]: boolean
   }
   status: string
-  // nonPeakHours?: {
-  //   start: string | null
-  //   end: string | null
-  // }
   peakHours?: Array<{
     start: string | null
     end: string | null
@@ -80,23 +74,35 @@ interface SportData {
 }
 
 interface CourtsData {
-  [key: string]: {
-    name: string
-    peakHours: Array<{
-      id: string
-      start: string | null | Dayjs
-      end: string | null | Dayjs
-      fee: number
-    }>
-    // nonPeakHours: {
-    //   start: string | null
-    //   end: string | null
-    // }
-    fees: {
-      regular: number
-    }
-    availability: boolean
+  [key: string]: CourtSettings
+}
+
+interface PeakHour {
+  id: string
+  startTime: Dayjs | null
+  endTime: Dayjs | null
+  fee: string
+}
+
+interface EditFormData {
+  sport_name: string
+  icon: string
+  sportStatus: string
+  startTime: Dayjs | null
+  endTime: Dayjs | null
+  peakHours: PeakHour[]
+  regularFee: string
+  days: {
+    Mon: boolean
+    Tue: boolean
+    Wed: boolean
+    Thu: boolean
+    Fri: boolean
+    Sat: boolean
+    Sun: boolean
   }
+  platformName: string
+  platformCount: string
 }
 
 const notify = (message: string, success: boolean) =>
@@ -117,64 +123,24 @@ export default function EditSportPage({
 }) {
   const router = useRouter()
   const supabase = createClient()
-  const [loading, setLoading] = useState(true)
   const { Column, HeaderCell, Cell } = Table
   const { user: currentUser } = useGlobalContext()
 
-  // Unwrap the params Promise using React.use()
-  const { id } = React.use(params)
-  const sportId = Number.parseInt(id)
+  const unwrappedParams = use(params)
+  const sportId = Number.parseInt(unwrappedParams.id)
 
-  const [sportData, setSportData] = useState<SportData[]>([])
-  const [courtData, setCourtData] = useState<CourtSettings[]>([])
-  const [courtNames, setCourtNames] = useState<string[]>([])
   const [timeFormat, setTimeFormat] = useState("12 hours")
-  const [newCourtName, setNewCourtName] = useState("")
   const [courtSearchQuery, setCourtSearchQuery] = useState("")
-  const [courtToDelete, setCourtToDelete] = useState<{
-    index: number
-    name: string
-  } | null>(null)
-  const [peakHourToDelete, setPeakHourToDelete] = useState<{
-    courtIndex: number
-    peakIndex: number
-  } | null>(null)
+  const [saveLoader, setSaveLoader] = useState(false)
+  const [cancelLoader, setCancelLoader] = useState(false)
+  const [backToSportsLoader, setBackToSportsLoader] = useState(false)
 
-  // 3. Add thirdPeakTime to the editFormData state
-  const [editFormData, setEditFormData] = useState<{
-    sportName: string
-    icon: string
-    sportStatus: string
-    startTime: Date | null | Dayjs
-    endTime: Date | null | Dayjs
-    // nonPeakStartTime: Date | null
-    // nonPeakEndTime: Date | null
-    peakHours: Array<{
-      id: string
-      startTime: Date| null
-      endTime: Date | null
-      fee: string
-    }>
-    regularFee: string
-    days: {
-      Mon: boolean
-      Tue: boolean
-      Wed: boolean
-      Thu: boolean
-      Fri: boolean
-      Sat: boolean
-      Sun: boolean
-    }
-    platformName: string
-    platformCount: string
-  }>({
-    sportName: "",
+  const [editFormData, setEditFormData] = useState<EditFormData>({
+    sport_name: "",
     icon: "",
-    sportStatus: "active",
+    sportStatus: "",
     startTime: null,
     endTime: null,
-    // nonPeakStartTime: null,
-    // nonPeakEndTime: null,
     peakHours: [{ id: crypto.randomUUID(), startTime: null, endTime: null, fee: "" }],
     regularFee: "",
     days: {
@@ -190,15 +156,10 @@ export default function EditSportPage({
     platformCount: "",
   })
 
-  const [editedCourts, setEditedCourts] = useState<{ [key: string]: boolean }>({})
+  const [courtData, setCourtData] = useState<CourtSettings[]>([])
 
-  useEffect(() => {
-    fetchSportData()
-  }, [sportId, currentUser])
-
-  const fetchSportData = async () => {
+  const fetchSportData = useCallback(async () => {
     try {
-      setLoading(true)
       const { data, error } = await supabase
         .from("companies")
         .select("sports_management,time_format")
@@ -212,13 +173,12 @@ export default function EditSportPage({
 
       if (data) {
         setTimeFormat(data.time_format)
-        console.log("Data", data)
 
         if (data.sports_management) {
-          const transformedData = data.sports_management.map((item: any) => ({
+          const transformedData = data.sports_management.map((item: SportData) => ({
             id: item.id,
             icon: item.icon,
-            sportName: item.sport_name,
+            sport_name: item.sport_name,
             courts: item.courts || [],
             availability: item.availability,
             platform_count: item.courts?.length || 0,
@@ -232,53 +192,40 @@ export default function EditSportPage({
               Sat: false,
               Sun: false,
             },
-            status: item.status || "active",
-            // nonPeakHours: item.nonPeakHours || { start: null, end: null },
+            status: item.status,
             peakHours: item.peakHours || [{ start: null, end: null, fee: 0 }],
             fees: item.fees || { regular: 0 },
             courtsData: item.courtsData || {},
             available_court_count: item.available_court_count || item.courts?.length || 0,
           }))
 
-          setSportData(transformedData)
+          const sportToEdit = transformedData.find((sport: SportData) => sport.id === sportId)
 
-          // Find the sport to edit
-          const sportToEdit = transformedData.find((sport: any) => sport.id === sportId)
-          // 4. Update the fetchSportData function to include thirdPeakHours
           if (sportToEdit) {
-            // Convert the peak hours array from the database to the form structure
             const peakHoursArray = Array.isArray(sportToEdit.peakHours)
-              ? sportToEdit.peakHours.map((peak: any) => ({
-                id: crypto.randomUUID(),
-                startTime: peak.start ? dayjs(peak.start, "HH:mm a") : null,
-                endTime: peak.end ? dayjs(peak.end, "HH:mm a") : null,
-                fee: peak.fee?.toString() || "",
-              }))
-              : [
-                {
+              ? sportToEdit.peakHours.map((peak: { start: string | null; end: string | null; fee: number }) => ({
                   id: crypto.randomUUID(),
-                  startTime: sportToEdit.peakHours?.start
-                    ? dayjs(sportToEdit.peakHours.start, "HH:mm a")
-                    : null,
-                  endTime: sportToEdit.peakHours?.end ? dayjs(sportToEdit.peakHours.end, "HH:mm a") : null,
-                  fee: sportToEdit.fees?.peak?.toString() || "",
-                },
-              ]
+                  startTime: peak.start ? dayjs(peak.start, "HH:mm a") : null,
+                  endTime: peak.end ? dayjs(peak.end, "HH:mm a") : null,
+                  fee: peak.fee?.toString() || "",
+                }))
+              : [
+                  {
+                    id: crypto.randomUUID(),
+                    startTime: sportToEdit.peakHours?.start ? dayjs(sportToEdit.peakHours.start, "HH:mm a") : null,
+                    endTime: sportToEdit.peakHours?.end ? dayjs(sportToEdit.peakHours.end, "HH:mm a") : null,
+                    fee: sportToEdit.fees?.peak?.toString() || "",
+                  },
+                ]
 
             setEditFormData({
-              sportName: sportToEdit.sportName,
+              sport_name: sportToEdit.sport_name,
               platformCount: sportToEdit.platform_count.toString(),
-              platformName: sportToEdit.courts[0] || "",
+              platformName: sportToEdit.courts[0]?.replace(/[0-9]+$/, "") || "",
               icon: sportToEdit.icon,
               sportStatus: sportToEdit.status,
               startTime: sportToEdit.timing.start ? dayjs(sportToEdit.timing.start, "HH:mm a") : null,
               endTime: sportToEdit.timing.end ? dayjs(sportToEdit.timing.end, "HH:mm a") : null,
-              // nonPeakStartTime: sportToEdit.nonPeakHours?.start
-              //   ? dayjs(sportToEdit.nonPeakHours.start, "HH:mm").toDate()
-              //   : null,
-              // nonPeakEndTime: sportToEdit.nonPeakHours?.end
-              //   ? dayjs(sportToEdit.nonPeakHours.end, "HH:mm").toDate()
-              //   : null,
               peakHours: peakHoursArray,
               regularFee: sportToEdit.fees?.regular?.toString() || "",
               days: {
@@ -291,92 +238,88 @@ export default function EditSportPage({
                 Sun: sportToEdit.days.Sun || false,
               },
             })
-          }
 
-          // Set court names
-          setCourtNames(sportToEdit.courts || [])
-
-          // 5. Update the court data creation to include thirdPeakHours
-          if (sportToEdit.courtsData && Object.keys(sportToEdit.courtsData).length > 0) {
-            const courtDataArray = sportToEdit.courts.map((courtName: string) => {
-              const courtSettings = {
+            if (sportToEdit.courtsData && Object.keys(sportToEdit.courtsData).length > 0) {
+              const courtDataArray = sportToEdit.courts.map((courtName: string) => ({
                 name: courtName,
-                peakHours: sportToEdit.courtsData[courtName].peakHours?.map((item: any) => {
-                  return {
-                    ...item,
+                peakHours: sportToEdit.courtsData?.[courtName].peakHours?.map(
+                  (item: { start: string | null; end: string | null; fee: number }) => ({
                     id: crypto.randomUUID(),
-                    start:item.start,
+                    start: item.start,
                     end: item.end,
-                  }
-                }),
-                // nonPeakHours: sportToEdit.nonPeakHours || {
-                //   start: null,
-                //   end: null,
-                // },
+                    fee: item.fee || 0,
+                  }),
+                ) || [{ id: crypto.randomUUID(), start: null, end: null, fee: 0 }],
                 fees: {
-                  regular: sportToEdit.fees?.regular || 0,
+                  regular: sportToEdit.courtsData?.[courtName].fees?.regular || 0,
                 },
-                availability: true,
-              }
-
-              return {
-                ...courtSettings,
-              }
-            })
-            setCourtData(courtDataArray)
-          } else {
-            // Create default court data if courtsData doesn't exist
-            const defaultCourtData = sportToEdit.courts.map((courtName: string) => ({
-              name: courtName,
-              peakHours: Array.isArray(sportToEdit.peakHours)
-                ? sportToEdit.peakHours
-                : [
-                  {
-                    id: crypto.randomUUID(),
-                    start: sportToEdit.peakHours?.start|| null,
-                    end: sportToEdit.peakHours?.end || null,
-                    fee: sportToEdit.fees?.peak || 0,
+                availability: sportToEdit.courtsData?.[courtName].availability !== false,
+              }))
+              setCourtData(courtDataArray)
+            } else {
+              const defaultCourtData: CourtSettings[] = sportToEdit.courts.map(
+                (courtName: string): CourtSettings => ({
+                  name: courtName,
+                  peakHours: Array.isArray(sportToEdit.peakHours)
+                    ? sportToEdit.peakHours.map(
+                        (peak: { start: string | null; end: string | null; fee: number }): {
+                          id: string
+                          start: string | null
+                          end: string | null
+                          fee: number
+                        } => ({
+                          id: crypto.randomUUID(),
+                          start: peak.start || null,
+                          end: peak.end || null,
+                          fee: peak.fee || 0,
+                        }),
+                      )
+                    : [
+                        {
+                          id: crypto.randomUUID(),
+                          start: sportToEdit.peakHours?.start || null,
+                          end: sportToEdit.peakHours?.end || null,
+                          fee: sportToEdit.fees?.peak || 0,
+                        },
+                      ],
+                  fees: {
+                    regular: sportToEdit.fees?.regular || 0,
                   },
-                ],
-              // nonPeakHours: sportToEdit.nonPeakHours || {
-              //   start: null,
-              //   end: null,
-              // },
-              fees: {
-                regular: sportToEdit.fees?.regular || 0,
-              },
-              availability: true,
-            }))
-
-            setCourtData(defaultCourtData)
+                  availability: true,
+                }),
+              )
+              setCourtData(defaultCourtData)
+            }
           }
         }
       }
     } catch (error) {
       console.error("Error fetching sport data:", error)
-    } finally {
-      setLoading(false)
     }
-  }
+  }, [currentUser?.email, sportId, supabase])
 
-  const handleEditInputChange = (field: string, value: any) => {
+  useEffect(() => {
+    fetchSportData()
+  }, [fetchSportData])
+
+  const handleEditInputChange = (field: keyof EditFormData, value: string | boolean | null| number | dayjs.Dayjs  ) => {
     setEditFormData((prev) => ({
       ...prev,
       [field]: value,
     }))
   }
 
-  const handleEditDayToggle = (day: string) => {
+  const handleEditDayToggle = (day: keyof EditFormData["days"]) => {
     setEditFormData((prev) => ({
       ...prev,
       days: {
         ...prev.days,
-        [day]: !prev.days[day as keyof typeof prev.days],
+        [day]: !prev.days[day],
       },
     }))
   }
 
-  const handleCourtUpdate = (index: number, field: string, value: any) => {
+  const handleCourtUpdate = (index: number, field: string, value: unknown) => {
     setCourtData((prev) => {
       const newData = [...prev]
 
@@ -385,10 +328,7 @@ export default function EditSportPage({
         newData[index] = {
           ...newData[index],
           [parent]: {
-            ...(typeof newData[index][parent as keyof CourtSettings] === "object" &&
-            newData[index][parent as keyof CourtSettings] !== null
-              ? (newData[index][parent as keyof CourtSettings] as object)
-              : {}),
+            ...(newData[index][parent as keyof CourtSettings] as object),
             [child]: value,
           },
         }
@@ -400,15 +340,11 @@ export default function EditSportPage({
       }
       return newData
     })
-
-    setEditedCourts((prev) => ({
-      ...prev,
-      [index]: true,
-    }))
   }
 
   const handleEditSave = async () => {
     try {
+      setSaveLoader(true)
       const { data, error: fetchError } = await supabase
         .from("companies")
         .select("sports_management")
@@ -422,94 +358,51 @@ export default function EditSportPage({
         return
       }
 
-      const platformCount = Number.parseInt(editFormData.platformCount) || 0
-      const platformNameBase = editFormData.platformName.trim()
-
-      // Determine if we should use letters or numbers based on the last character
-      const lastChar = platformNameBase.slice(-1)
-      const useLetters = isNaN(Number(lastChar)) // If last character is not a number
-
-      let courtNames: string[] = []
-      if (courtData.length > 0) {
-        // Use existing court names from courtData
-        courtNames = courtData.map((court) => court.name)
-      } else {
-        // Only generate new names if no courts exist
-        for (let i = 0; i < Number.parseInt(editFormData.platformCount); i++) {
-          if (useLetters) {
-            const letter = String.fromCharCode(65 + i)
-            courtNames.push(`${platformNameBase}${letter}`)
-          } else {
-            courtNames.push(`${platformNameBase}${i + 1}`)
-          }
-        }
-      }
-
-      // Create default values for peak hours and fees
-      const defaultPeakHours = editFormData.peakHours.map((peak) => ({
-        id: peak.id, // Include the id property
-        start: peak.startTime ? dayjs(peak.startTime).format("h:mm a") : null,
-        end: peak.endTime ? dayjs(peak.endTime).format("h:mm a") : null,
-        fee: Number.parseFloat(peak.fee) || 0,
-      }))
-
-      // Update the defaultFees:
-      const defaultFees = {
-        regular: Number.parseFloat(editFormData.regularFee) || 0,
-      }
-
-      // Update the courtsData creation:
+      // Create courtsData object preserving all individual court settings
       const courtsData: CourtsData = {}
-      courtData.forEach((court, index) => {
-        if (editedCourts[index]) {
-          // This court has been individually edited, preserve its values
-          courtsData[court.name] = {
-            name: court.name,
-            peakHours: Array.isArray(court.peakHours) ? court.peakHours : [],
-            // nonPeakHours: court.nonPeakHours,
-            fees: court.fees,
-            availability: court.availability,
-          }
-        } else {
-          // This court hasn't been individually edited, apply default values
-          courtsData[court.name] = {
-            name: court.name,
-            peakHours: defaultPeakHours,
-            // nonPeakHours: {
-            //   start: editFormData.nonPeakStartTime ? dayjs(editFormData.nonPeakStartTime).format("HH:mm") : null,
-            //   end: editFormData.nonPeakEndTime ? dayjs(editFormData.nonPeakEndTime).format("HH:mm") : null,
-            // },
-            fees: defaultFees,
-            availability: court.availability,
-          }
+      courtData.forEach((court) => {
+        courtsData[court.name] = {
+          name: court.name,
+          peakHours: court.peakHours.map((peak) => ({
+            id: peak.id,
+            start: peak.start,
+            end: peak.end,
+            fee: peak.fee,
+          })),
+          fees: {
+            regular: court.fees.regular,
+          },
+          availability: court.availability,
         }
       })
 
       // Calculate available courts count
       const availableCourtCount = courtData.filter((court) => court.availability).length
 
-      // Update the sports data with the new values
-      const updatedSportsData = data.sports_management.map((sport: any) => {
+      // Update the sports data
+      const updatedSportsData = data.sports_management.map((sport: SportData) => {
         if (sport.id === sportId) {
           return {
             ...sport,
             icon: editFormData.icon,
-            sport_name: editFormData.sportName,
+            sport_name: editFormData.sport_name,
             status: editFormData.sportStatus,
-            courts: courtNames,
+            courts: courtData.map((court) => court.name),
             timing: {
               start: editFormData.startTime ? dayjs(editFormData.startTime).format("h:mm a") : null,
               end: editFormData.endTime ? dayjs(editFormData.endTime).format("h:mm a") : null,
             },
-            // nonPeakHours: {
-            //   start: editFormData.nonPeakStartTime ? dayjs(editFormData.nonPeakStartTime).format("HH:mm") : null,
-            //   end: editFormData.nonPeakEndTime ? dayjs(editFormData.nonPeakEndTime).format("HH:mm") : null,
-            // },
-            peakHours: defaultPeakHours,
+            peakHours: editFormData.peakHours.map((peak) => ({
+              start: peak.startTime ? dayjs(peak.startTime).format("h:mm a") : null,
+              end: peak.endTime ? dayjs(peak.endTime).format("h:mm a") : null,
+              fee: Number.parseFloat(peak.fee) || 0,
+            })),
             days: editFormData.days,
-            fees: defaultFees,
+            fees: {
+              regular: Number.parseFloat(editFormData.regularFee) || 0,
+            },
             courtsData: courtsData,
-            platform_count: courtNames.length,
+            platform_count: courtData.length,
             available_court_count: availableCourtCount,
           }
         }
@@ -522,23 +415,31 @@ export default function EditSportPage({
           sports_management: updatedSportsData,
         })
         .eq("store_admin", currentUser?.email)
-      notify("Sport updated successfully", true)
+
       if (error) throw error
 
-      // router.push("/sports-management")
+      notify("Sport updated successfully", true)
       fetchSportData()
     } catch (error) {
       console.error("Error updating sport data:", error)
+      notify("Failed to update sport", false)
+    } finally {
+      setSaveLoader(false)
     }
   }
 
   const handleDeleteCourt = (index: number) => {
+    if (courtData.length <= 1) {
+      notify("Cannot delete the last court", false)
+      return
+    }
+
     setCourtData((prev) => {
       const newData = [...prev]
       newData.splice(index, 1)
       return newData
     })
-    setCourtToDelete(null)
+    handleEditInputChange("platformCount", (courtData.length - 1).toString())
   }
 
   const addPeakHour = (courtIndex?: number) => {
@@ -549,42 +450,40 @@ export default function EditSportPage({
           newData[courtIndex].peakHours = []
         }
 
-        // Check if there's already an empty peak hour entry to prevent duplicates
-        const hasEmptyEntry = newData[courtIndex].peakHours.some(
-          (hour) => hour.start === null && hour.end === null && hour.fee === 0,
-        )
-
-        if (!hasEmptyEntry) {
-          // Only add one new peak hour entry if there's no empty entry
-          newData[courtIndex].peakHours.push({
-            id: crypto.randomUUID(),
-            start: null,
-            end: null,
-            fee: 0,
-          })
+        const lastPeakHour = newData[courtIndex].peakHours[newData[courtIndex].peakHours.length - 1]
+        if (lastPeakHour && (!lastPeakHour.start || !lastPeakHour.end || !lastPeakHour.fee)) {
+          notify("Please complete the current peak hour details for this court before adding a new one", false)
+          return prev
         }
+
+        newData[courtIndex].peakHours.push({
+          id: crypto.randomUUID(),
+          start: null,
+          end: null,
+          fee: 0,
+        })
 
         return newData
       })
-      setEditedCourts((prev) => ({
-        ...prev,
-        [courtIndex]: true,
-      }))
     } else {
-      // For the main form's peak hours
       setEditFormData((prev) => {
-        // Check if there's already an empty peak hour entry
-        const hasEmptyEntry = prev.peakHours.some(
-          (hour) => hour.startTime === null && hour.endTime === null && hour.fee === "",
-        )
-
-        if (hasEmptyEntry) {
-          return prev // Don't add another empty entry
+        const lastPeakHour = prev.peakHours[prev.peakHours.length - 1]
+        if (lastPeakHour && (!lastPeakHour.startTime || !lastPeakHour.endTime || !lastPeakHour.fee)) {
+          notify("Please complete the current peak hour details before adding a new one", false)
+          return prev
         }
 
         return {
           ...prev,
-          peakHours: [...prev.peakHours, { id: crypto.randomUUID(), startTime: null, endTime: null, fee: "" }],
+          peakHours: [
+            ...prev.peakHours,
+            {
+              id: crypto.randomUUID(),
+              startTime: null,
+              endTime: null,
+              fee: "",
+            },
+          ],
         }
       })
     }
@@ -594,17 +493,11 @@ export default function EditSportPage({
     if (courtIndex !== undefined) {
       setCourtData((prev) => {
         const newData = [...prev]
-        if (Array.isArray(newData[courtIndex].peakHours) && newData[courtIndex].peakHours.length > 1) {
-          // Create a new array without the peak hour with the specified ID
+        if (Array.isArray(newData[courtIndex].peakHours)) {
           newData[courtIndex].peakHours = newData[courtIndex].peakHours.filter((hour) => hour.id !== id)
         }
         return newData
       })
-      setEditedCourts((prev) => ({
-        ...prev,
-        [courtIndex]: true,
-      }))
-      setPeakHourToDelete(null)
     } else {
       if (editFormData.peakHours.length > 1) {
         setEditFormData((prev) => ({
@@ -615,28 +508,23 @@ export default function EditSportPage({
     }
   }
 
-  // In the handlePeakHourChange function, add validation to ensure peak hours are within platform timing
-  const handlePeakHourChange = (id: string, field: string, value: any, courtIndex?: number) => {
-    // For validation checks
-    const validateTimeValue = (value: any, fieldType: string, peakId: string, courtIdx?: number) => {
-      // Get platform start and end times
+  const handlePeakHourChange = (id: string, field: string, value: Dayjs | number | string, courtIndex?: number) => {
+    const validateTimeValue = (value: Dayjs | null, fieldType: string, peakId: string, courtIdx?: number) => {
       const platformStart = editFormData.startTime ? dayjs(editFormData.startTime, "HH:mm a") : null
       const platformEnd = editFormData.endTime ? dayjs(editFormData.endTime, "HH:mm a") : null
 
-      // If platform times are set, validate the peak hour time
       if (platformStart && platformEnd && value) {
-        // Check if peak time is outside platform hours
         if (value.isBefore(platformStart) || value.isAfter(platformEnd)) {
-          // Show error toast - ensure this is called
-          // notify(
-          //   `Peak hours must be within platform timing (${platformStart.format("h:mm A")} - ${platformEnd.format("h:mm A")})`,
-          //   false,
-          // )
+          notify(
+            `Peak hours must be within platform timing (${platformStart.format(
+              timeFormat === "12 hours" ? "h:mm A" : "HH:mm",
+            )} - ${platformEnd.format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")})`,
+            false,
+          )
           return false
         }
       }
 
-      // For end time, check if it's before start time
       if (fieldType === "end" || fieldType === "endTime") {
         let startTime = null
 
@@ -648,7 +536,7 @@ export default function EditSportPage({
         } else {
           const peakHour = editFormData.peakHours.find((hour) => hour.id === peakId)
           if (peakHour?.startTime) {
-            startTime =dayjs(peakHour.startTime, "HH:mm a")
+            startTime = dayjs(peakHour.startTime, "HH:mm a")
           }
         }
 
@@ -662,9 +550,8 @@ export default function EditSportPage({
     }
 
     if (courtIndex !== undefined) {
-      // For court-specific peak hours
       if (field === "start" || field === "end") {
-        if (!validateTimeValue(value, field, id, courtIndex)) {
+        if (!validateTimeValue(value as Dayjs, field, id, courtIndex)) {
           return
         }
 
@@ -673,10 +560,9 @@ export default function EditSportPage({
           if (Array.isArray(newData[courtIndex].peakHours)) {
             newData[courtIndex].peakHours = newData[courtIndex].peakHours.map((hour) => {
               if (hour.id === id) {
-                if (field === "start") {
-                  return { ...hour, start: value ? dayjs(value).format('h:mm a') : null }
-                } else if (field === "end") {
-                  return { ...hour, end: value ? dayjs(value).format('h:mm a') : null }
+                return {
+                  ...hour,
+                  [field]: value ? dayjs(value as Dayjs).format("h:mm a") : null,
                 }
               }
               return hour
@@ -685,7 +571,6 @@ export default function EditSportPage({
           return newData
         })
       } else {
-        // For fee field
         setCourtData((prev) => {
           const newData = [...prev]
           if (Array.isArray(newData[courtIndex].peakHours)) {
@@ -699,15 +584,9 @@ export default function EditSportPage({
           return newData
         })
       }
-
-      setEditedCourts((prev) => ({
-        ...prev,
-        [courtIndex]: true,
-      }))
     } else {
-      // For main form peak hours
       if (field === "startTime" || field === "endTime") {
-        if (!validateTimeValue(value, field, id)) {
+        if (!validateTimeValue(value as Dayjs, field, id)) {
           return
         }
       }
@@ -723,22 +602,16 @@ export default function EditSportPage({
   }
 
   const handleAddCourt = () => {
-    // Get all existing court names
     const existingNames = courtData.map((court) => court.name)
-
-    // Find highest number/letter in existing names
     let highestIndex = 0
     let useLetters = false
 
     existingNames.forEach((name) => {
-      // Check for number suffix
       const numMatch = name.match(/\d+$/)
       if (numMatch) {
         const num = Number.parseInt(numMatch[0])
         if (num > highestIndex) highestIndex = num
-      }
-      // Check for letter suffix
-      else {
+      } else {
         const letter = name.slice(-1).toUpperCase()
         if (/[A-Z]/.test(letter)) {
           useLetters = true
@@ -748,28 +621,21 @@ export default function EditSportPage({
       }
     })
 
-    // Determine base name (remove any trailing numbers/letters)
     let baseName = editFormData.platformName.trim()
-    if (useLetters) {
-      baseName = baseName.replace(/[A-Za-z]$/, "")
-    } else {
-      baseName = baseName.replace(/\d+$/, "")
-    }
+    baseName = useLetters ? baseName.replace(/[A-Za-z]$/, "") : baseName.replace(/\d+$/, "")
 
-    // Create new court name
     const newIndex = highestIndex + 1
     const newCourtName = useLetters ? `${baseName}${String.fromCharCode(65 + newIndex)}` : `${baseName}${newIndex}`
 
-    // Create new court with default settings
     const newCourt: CourtSettings = {
       name: newCourtName,
       peakHours: [
-        ...editFormData.peakHours.map((peak) => ({
+        {
           id: crypto.randomUUID(),
-          start: peak.startTime ? dayjs(peak.startTime).format("h:mm a") : null,
-          end: peak.endTime ? dayjs(peak.endTime).format("h:mm a") : null,
-          fee: Number.parseFloat(peak.fee) || 0,
-        })),
+          start: null,
+          end: null,
+          fee: 0,
+        },
       ],
       fees: {
         regular: Number.parseFloat(editFormData.regularFee) || 0,
@@ -777,12 +643,12 @@ export default function EditSportPage({
       availability: true,
     }
 
-    // Add new court
+    notify(`Court ${newCourtName} added successfully`, true)
     setCourtData([...courtData, newCourt])
     handleEditInputChange("platformCount", (courtData.length + 1).toString())
   }
 
-  const handleEndTimeChange = (time: any) => {
+  const handleEndTimeChange = (time: Dayjs | null) => {
     if (editFormData.startTime && time) {
       const startTime = dayjs(editFormData.startTime)
 
@@ -795,47 +661,56 @@ export default function EditSportPage({
   }
 
   return (
-    <div className="w-full bg-white p-4 ">
-      <Toaster />
-      <div className="px-4 py-2 flex items-center justify-between">
-        <div className="items-center gap-2">
-          <h1 className="text-xl font-bold text-zinc-950">Edit Sport</h1>
-          <p className="text-sm text-zinc-500">Update sport details.</p>
+    <>
+      <div className="w-full bg-white p-4 ">
+        <Toaster />
+        <div className="px-4 py-2 flex items-center justify-between">
+          <div className="items-center gap-2">
+            <h1 className="text-xl font-bold text-zinc-950">Edit Sport</h1>
+            <p className="text-sm text-zinc-500">Update sport details.</p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setBackToSportsLoader(true)
+              setTimeout(() => {
+                router.push("/sports-management")
+                setBackToSportsLoader(false)
+              }, 1000)
+            }}
+            disabled={backToSportsLoader}
+          >
+            {backToSportsLoader ? (
+              <svg
+                className="animate-spin h-6 w-6 text-teal-700"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path
+                  className="opacity-100"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+            ) : (
+              "Back To Sports"
+            )}
+          </Button>
         </div>
-        <Button variant="outline" onClick={() => router.push("/sports-management")}>
-          Back to Sports
-        </Button>
-      </div>
 
-      {loading ? (
-        <div className="flex justify-center items-center h-64">Loading...</div>
-      ) : (
         <div className="w-full space-y-4 pt-4 pb-32 px-4">
           <div className="flex gap-4">
             <div className="w-full space-y-2">
               <Label className="text-gray-900 text-sm font-medium">Sport Name</Label>
-              {/* <Select
-                value={editFormData.sportName}
-                onValueChange={(value) => handleEditInputChange("sportName", value)}
-              >
-                <SelectTrigger className="w-full border border-zinc-300 bg-gray-50 text-sm pt-0.5 text-gray-700">
-                  <SelectValue placeholder="Badminton / Tennis / Cricket..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Badminton">Badminton</SelectItem>
-                  <SelectItem value="Tennis">Tennis</SelectItem>
-                  <SelectItem value="Cricket">Cricket</SelectItem>
-                  <SelectItem value="GYM">GYM</SelectItem>
-                  <SelectItem value="Yoga Class">Yoga Class</SelectItem>
-                </SelectContent>
-              </Select> */}
               <Input
                 type="text"
                 placeholder="Badminton / Tennis / Cricket..."
                 className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
-                value={editFormData.sportName || ""}
+                value={editFormData.sport_name || ""}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  handleEditInputChange("sportName", e.target.value)
+                  handleEditInputChange("sport_name", e.target.value)
                 }
               />
             </div>
@@ -846,37 +721,18 @@ export default function EditSportPage({
                 <SelectTrigger className="w-full border border-zinc-300 bg-gray-50 text-sm text-gray-700">
                   <SelectValue placeholder="Choose icon" />
                 </SelectTrigger>
-                {/* Update the SelectContent for the icon field */}
                 <SelectContent>
                   <SelectItem value="badminton">
-                    <div className="flex items-center gap-2">
-                      {getSportIcon("badminton")}
-                      {/* <span>Badminton</span> */}
-                    </div>
+                    <div className="flex items-center gap-2">{getSportIcon("badminton")}</div>
                   </SelectItem>
                   <SelectItem value="tennis">
-                    <div className="flex items-center gap-2">
-                      {getSportIcon("tennis")}
-                      {/* <span>Tennis</span> */}
-                    </div>
+                    <div className="flex items-center gap-2">{getSportIcon("tennis")}</div>
                   </SelectItem>
                   <SelectItem value="cricket">
-                    <div className="flex items-center gap-2">
-                      {getSportIcon("cricket")}
-                      {/* <span>Cricket</span> */}
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="gym">
-                    <div className="flex items-center gap-2">
-                      {getSportIcon("gym")}
-                      {/* <span>GYM</span> */}
-                    </div>
+                    <div className="flex items-center gap-2">{getSportIcon("cricket")}</div>
                   </SelectItem>
                   <SelectItem value="yoga">
-                    <div className="flex items-center gap-2">
-                      {getSportIcon("yoga")}
-                      {/* <span>Yoga</span> */}
-                    </div>
+                    <div className="flex items-center gap-2">{getSportIcon("yoga")}</div>
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -910,7 +766,6 @@ export default function EditSportPage({
           </div>
 
           <div className="flex gap-4">
-            {/* No. of Platform */}
             <div className="flex-1 space-y-2">
               <Label className="text-gray-900 text-sm font-medium">No. of Platform</Label>
               <input
@@ -923,12 +778,11 @@ export default function EditSportPage({
               />
             </div>
 
-            {/* Platform Timing - Compact */}
             <div className="flex-1 space-y-2">
               <Label className="text-gray-900 text-sm font-medium">Platform Timing</Label>
               <div className="flex items-center gap-2">
                 <TimePicker
-                  value={editFormData.startTime ? dayjs(editFormData.startTime,'h:mm a') : null}
+                  value={editFormData.startTime ? dayjs(editFormData.startTime, "h:mm a") : null}
                   use12Hours={timeFormat === "12 hours"}
                   format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm"}
                   placeholder="Start"
@@ -936,10 +790,8 @@ export default function EditSportPage({
                   onChange={(time) => handleEditInputChange("startTime", time)}
                 />
                 <span className="text-gray-500">to</span>
-                {/* Also add validation to the Platform Timing section */}
-                {/* Find the Platform Timing section and update the endTime TimePicker */}
                 <TimePicker
-                  value={editFormData.endTime ? dayjs(editFormData.endTime,'h:mm a') : null}
+                  value={editFormData.endTime ? dayjs(editFormData.endTime, "h:mm a") : null}
                   use12Hours={timeFormat === "12 hours"}
                   format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm"}
                   placeholder="End"
@@ -961,33 +813,9 @@ export default function EditSportPage({
                 />
               </div>
             </div>
-            {/* <div className="flex-1 space-y-2">
-              <Label className="text-gray-900 text-sm font-medium">Non Peak Hours</Label>
-              <div className="flex items-center gap-2">
-                <TimePicker
-                  value={editFormData.nonPeakStartTime ? dayjs(editFormData.nonPeakStartTime) : null}
-                  use12Hours={timeFormat === "12 hours"}
-                  format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm"}
-                  placeholder="Start"
-                  className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                  onChange={(time) => handleEditInputChange("nonPeakStartTime", time)}
-                />
-                <span className="text-gray-500">to</span>
-                <TimePicker
-                  value={editFormData.nonPeakEndTime ? dayjs(editFormData.nonPeakEndTime) : null}
-                  use12Hours={timeFormat === "12 hours"}
-                  format={timeFormat === "12 hours" ? "h:mm A" : "HH:mm"}
-                  placeholder="End"
-                  className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                  onChange={(time) => handleEditInputChange("nonPeakEndTime", time)}
-                />
-              </div>
-            </div> */}
           </div>
 
           <div className="flex gap-4">
-            {/* Fees Section */}
-
             <div className="flex-1 space-y-2">
               <Label className="text-gray-900 text-sm font-medium">Active Days</Label>
               <div className="flex gap-4 flex-wrap pt-2">
@@ -997,7 +825,7 @@ export default function EditSportPage({
                       type="checkbox"
                       className="accent-teal-800"
                       checked={editFormData.days[day as keyof typeof editFormData.days]}
-                      onChange={() => handleEditDayToggle(day)}
+                      onChange={() => handleEditDayToggle(day as keyof EditFormData["days"])}
                     />
                     {day}
                   </label>
@@ -1051,10 +879,7 @@ export default function EditSportPage({
             </div>
           </div>
 
-          <div
-            className="w-full border border-zinc-200 rounded-[8px] bg-white text-sm my-6"
-            // style={{ maxHeight: "600px", overflowY: "auto" }}
-          >
+          <div className="w-full border border-zinc-200 rounded-[8px] bg-white text-sm my-6">
             <Table
               data={courtData.filter((court) => court.name.toLowerCase().includes(courtSearchQuery.toLowerCase()))}
               autoHeight={false}
@@ -1096,18 +921,13 @@ export default function EditSportPage({
                 <Cell className="h-[200px]">
                   {(rowData: RowDataType, index?: number) => (
                     <div className="flex flex-col gap-4 max-h-[150px] overflow-y-auto pr-2">
-                      {Array.isArray(rowData.peakHours) ? (
-                       
-                        rowData.peakHours.map((peak, peakIndex) => {
-                          console.log(rowData)
-                          return(
-                
+                      {Array.isArray(rowData.peakHours) &&
+                        rowData.peakHours.map((peak) => (
                           <div key={peak.id} className="flex items-center gap-2">
-                      
                             <TimePicker
-                              value={peak.start ? dayjs(peak.start,'h:mm a') : null}
+                              value={peak.start ? dayjs(peak.start, "h:mm a") : null}
                               use12Hours={timeFormat === "12 hours"}
-                              format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm A"}
+                              format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm"}
                               onChange={(time) =>
                                 index !== undefined && handlePeakHourChange(peak.id, "start", time, index)
                               }
@@ -1115,11 +935,11 @@ export default function EditSportPage({
                               disabled={!rowData?.availability}
                               placeholder="Start"
                             />
-                            <span>-</span>
+                            <span>to</span>
                             <TimePicker
-                              value={peak.end ? dayjs(peak.end,'h:mm a') : null}
+                              value={peak.end ? dayjs(peak.end, "h:mm a") : null}
                               use12Hours={timeFormat === "12 hours"}
-                              format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm A"}
+                              format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm"}
                               onChange={(time) =>
                                 index !== undefined && handlePeakHourChange(peak.id, "end", time, index)
                               }
@@ -1168,44 +988,27 @@ export default function EditSportPage({
                               </AlertDialog>
                             )}
                           </div>
-                        )
-                        })
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <TimePicker
-                            value={null}
-                            use12Hours={timeFormat === "12 hours"}
-                            format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm A"}
-                            className="!border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                            disabled={!rowData?.availability}
-                            placeholder="Start"
-                          />
-                          <span>-</span>
-                          <TimePicker
-                            value={null}
-                            use12Hours={timeFormat === "12 hours"}
-                            format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm A"}
-                            className="!border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                            disabled={!rowData?.availability}
-                            placeholder="End"
-                          />
-                          <Input
-                            type="number"
-                            value={0}
-                            className="w-20 border border-zinc-300 rounded-md bg-gray-50 p-1 text-xs text-gray-700"
-                            disabled={!rowData?.availability}
-                            placeholder="Fee"
-                          />
-                        </div>
-                      )}
+                        ))}
                       <div className="flex justify-start">
                         <button
                           type="button"
-                          onClick={() => index !== undefined && addPeakHour(index)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (index !== undefined) {
+                              addPeakHour(index)
+                            }
+                          }}
                           className="flex justify-center text-teal-800 hover:text-teal-700"
                           disabled={!rowData?.availability}
                         >
-                          <Plus size={16} />
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Plus size={16} />
+                              </TooltipTrigger>
+                              <TooltipContent>Add Peak hour and Fees</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </button>
                       </div>
                     </div>
@@ -1250,10 +1053,8 @@ export default function EditSportPage({
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => {
-                                if (index !== undefined && courtData.length > 1) {
+                                if (index !== undefined) {
                                   handleDeleteCourt(index)
-                                } else if (courtData.length <= 1) {
-                                  notify("Cannot delete the last court", false)
                                 }
                               }}
                               className="bg-red-600 hover:bg-red-700"
@@ -1270,21 +1071,57 @@ export default function EditSportPage({
             </Table>
           </div>
         </div>
-      )}
-      <div className="w-full flex justify-end border border-bgborder_color rounded-[6px] bg-white p-2 gap-2">
-        <button
-          className="border border-zinc-300 rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center cursor-pointer"
-          onClick={() => router.push("/sports-management")}
-        >
-          Cancel
-        </button>
-        <button
-          className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center"
-          onClick={handleEditSave}
-        >
-          Save Changes
-        </button>
+
+        <div className="w-full flex justify-end border border-bgborder_color rounded-[6px] bg-white p-2 gap-2">
+          <button
+            className="border border-zinc-300 rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center cursor-pointer"
+            onClick={() => {
+              setCancelLoader(true)
+              setTimeout(() => {
+                router.push("/sports-management")
+                setCancelLoader(false)
+              }, 1000)
+            }}
+            disabled={cancelLoader}
+          >
+            {cancelLoader ? (
+              <svg
+                className="animate-spin h-6 w-6 text-teal-700"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path
+                  className="opacity-100"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+            ) : (
+              "Cancel"
+            )}
+          </button>
+          <button
+            className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center"
+            onClick={handleEditSave}
+            disabled={saveLoader}
+          >
+            {saveLoader ? (
+              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="#fff" strokeWidth="4"></circle>
+                <path
+                  className="opacity-75"
+                  fill="#fff"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+            ) : (
+              "Save Changes"
+            )}
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

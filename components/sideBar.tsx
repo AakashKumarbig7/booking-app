@@ -21,7 +21,7 @@ import Image from "next/image"
 
 const SideBar = () => {
   // const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(true)
+  const [collapsed] = useState(true)
   const [isHovered, setIsHovered] = useState(false)
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [loadingMenu, setLoadingMenu] = useState<string | null>(null)

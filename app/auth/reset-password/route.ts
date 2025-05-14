@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { password, code, email } = await request.json();
+    const { password, email } = await request.json();
     const supabase = await createClient();
 
     if (!password || !email) {
