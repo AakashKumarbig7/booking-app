@@ -33,7 +33,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   // Define role-based path access
   const rolePaths = {
-    admin: ['/organisation','/staff-management','/sports-management','/profile','/not-found'],
+    admin: ['/organisation','/staff-management','/sports-management','/profile'],
     user: ['/home','/content', '/feedback','/options','/profile']
   };
 
