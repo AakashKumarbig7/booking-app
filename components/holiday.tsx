@@ -10,7 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { createClient } from "@/utils/supabase/client";
+import { supabase } from '@/utils/supabase/client';
 import {
   Dialog,
   DialogContent,
@@ -40,7 +40,7 @@ interface HolidayFormData {
 }
 
 const Holidays = () => {
-  const supabase = createClient();
+  // const supabase = createClient();
   const { user: currentUser } = useGlobalContext();
   const [openAdd, setOpenAdd] = useState(false);
   const [editData, setEditData] = useState<HolidayFormData | null>(null);

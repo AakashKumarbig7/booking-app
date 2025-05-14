@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { createClient } from "@/utils/supabase/client"
+import { supabase } from '@/utils/supabase/client';
 
 export interface RoleSelectorProps {
   value: string
@@ -18,7 +18,7 @@ export default function RoleSelector({ value, onChange, error }: RoleSelectorPro
   const [inputValue, setInputValue] = useState("")
   const [roles, setRoles] = useState<{ name: string }[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const supabase = createClient()
+  // const supabase = createClient()
 
   // Fetch roles from the database
   const fetchRoles = async () => {

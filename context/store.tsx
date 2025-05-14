@@ -7,7 +7,7 @@ import React, {
   Dispatch,
   SetStateAction,
 } from "react";
-import { createClient } from "../utils/supabase/client";
+import { supabase } from "@/utils/supabase/client";
 
 interface UserData {
   email: any;
@@ -27,7 +27,7 @@ export const GlobalContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<UserData | null>(null);
-  const supabase = createClient();
+  // const supabase = createClient();
 
   useEffect(() => {
     const fetchUserData = async () => {

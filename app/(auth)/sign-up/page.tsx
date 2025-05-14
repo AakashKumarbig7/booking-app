@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { CheckCircle, Eye, EyeOff, TriangleAlert} from "lucide-react";
 import { toaster, Message} from 'rsuite';
-import { createClient } from "@/utils/supabase/client";
+import { supabase } from '@/utils/supabase/client';
 
 export default function SignUp() {
   const [message, setMessage] = useState<string | null>(null);
@@ -15,11 +15,11 @@ export default function SignUp() {
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false); 
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [supabase, setSupabase] = useState<any>(null);
+  const [supabaseClient, setSupabaseClient] = useState<any>(null);
 
   useEffect(() => {
     // Initialize Supabase client only on client side
-    setSupabase(createClient());
+    setSupabaseClient(supabase);
   }, []);
 
   const fetchLogo = async () => {
@@ -45,7 +45,7 @@ export default function SignUp() {
       };
       fetchLogoUrl();
     }
-  }, [supabase]);
+  }, [supabaseClient]);
 
 
   // Sign up handler

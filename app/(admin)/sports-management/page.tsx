@@ -13,7 +13,7 @@ import { Table } from "rsuite"
 import type { RowDataType } from "rsuite/esm/Table"
 import dayjs from "dayjs"
 import { useGlobalContext } from "@/context/store"
-import { createClient } from "@/utils/supabase/client"
+import { supabase } from '@/utils/supabase/client';
 import { useRouter } from "next/navigation"
 import BadmintonIcon, { getSportIcon } from "@/components/sport-icons"
 import toast from "react-hot-toast"
@@ -133,7 +133,7 @@ const notify = (message: string, success: boolean) =>
 
 export default function SportsManagementPage() {
   const router = useRouter()
-  const supabase = createClient()
+
   const [openAdd, setOpenAdd] = useState(false)
   const { Column, HeaderCell, Cell } = Table
   const { user: currentUser } = useGlobalContext()

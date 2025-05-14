@@ -6,14 +6,14 @@ import dayjs from "dayjs"
 import timezone from "dayjs/plugin/timezone"
 import utc from "dayjs/plugin/utc"
 import { useEffect, useState } from "react"
-import { createClient } from "@/utils/supabase/client"
+import { supabase } from '@/utils/supabase/client';
 import { useGlobalContext } from "@/context/store"
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
 const DatePickerComponent = ({ value, onChange, ...props }: DatePickerProps) => {
-  const supabase = createClient()
+  // const supabase = createClient()
   const { user: currentUser } = useGlobalContext()
   const [dateFormat, setDateFormat] = useState<string>("DD/MM/YYYY") // Default to DD/MM/YYYY
   const [timeZone, setTimeZone] = useState<string>("Australia/Melbourne")

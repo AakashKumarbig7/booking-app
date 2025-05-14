@@ -3,7 +3,7 @@ import { FilePlus, SquarePen, Trash2 } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { Table } from "rsuite"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { createClient } from "@/utils/supabase/client"
+import { supabase } from '@/utils/supabase/client';
 import {
   Dialog,
   DialogContent,
@@ -131,7 +131,7 @@ const AccessLevel = () => {
   const [editData, setEditData] = useState<DataItem | null>(null);
   const [openEdit, setOpenEdit] = useState(false);
   const [data, setData] = useState<DataItem[]>([]);
-  const supabase = createClient();
+  // const supabase = createClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [permissionLists, setPermissionLists] = useState<PermissionCategory[]>(allPermission);
