@@ -509,52 +509,9 @@ export default function EditSportPage({
   }
 
   const handlePeakHourChange = (id: string, field: string, value: Dayjs | number | string, courtIndex?: number) => {
-    const validateTimeValue = (value: Dayjs | null, fieldType: string, peakId: string, courtIdx?: number) => {
-      const platformStart = editFormData.startTime ? dayjs(editFormData.startTime, "HH:mm a") : null
-      const platformEnd = editFormData.endTime ? dayjs(editFormData.endTime, "HH:mm a") : null
-
-      if (platformStart && platformEnd && value) {
-        if (value.isBefore(platformStart) || value.isAfter(platformEnd)) {
-          notify(
-            `Peak hours must be within platform timing (${platformStart.format(
-              timeFormat === "12 hours" ? "h:mm A" : "HH:mm",
-            )} - ${platformEnd.format(timeFormat === "12 hours" ? "h:mm A" : "HH:mm")})`,
-            false,
-          )
-          return false
-        }
-      }
-
-      if (fieldType === "end" || fieldType === "endTime") {
-        let startTime = null
-
-        if (courtIdx !== undefined) {
-          const peakHour = courtData[courtIdx]?.peakHours.find((hour) => hour.id === peakId)
-          if (peakHour?.start) {
-            startTime = dayjs(peakHour.start, "HH:mm a")
-          }
-        } else {
-          const peakHour = editFormData.peakHours.find((hour) => hour.id === peakId)
-          if (peakHour?.startTime) {
-            startTime = dayjs(peakHour.startTime, "HH:mm a")
-          }
-        }
-
-        if (startTime && value && value.isBefore(startTime)) {
-          notify("End time cannot be before start time", false)
-          return false
-        }
-      }
-
-      return true
-    }
-
+    // First update the state
     if (courtIndex !== undefined) {
       if (field === "start" || field === "end") {
-        if (!validateTimeValue(value as Dayjs, field, id, courtIndex)) {
-          return
-        }
-
         setCourtData((prev) => {
           const newData = [...prev]
           if (Array.isArray(newData[courtIndex].peakHours)) {
@@ -585,12 +542,6 @@ export default function EditSportPage({
         })
       }
     } else {
-      if (field === "startTime" || field === "endTime") {
-        if (!validateTimeValue(value as Dayjs, field, id)) {
-          return
-        }
-      }
-
       setEditFormData((prev) => {
         const updatedPeakHours = prev.peakHours.map((hour) => (hour.id === id ? { ...hour, [field]: value } : hour))
         return {
@@ -599,8 +550,42 @@ export default function EditSportPage({
         }
       })
     }
+  
+    // Then perform validation after state update
+    if ((field === "start" || field === "end" || field === "startTime" || field === "endTime") && value) {
+      const platformStart = editFormData.startTime ? dayjs(editFormData.startTime, "HH:mm a") : null
+      const platformEnd = editFormData.endTime ? dayjs(editFormData.endTime, "HH:mm a") : null
+  
+      if (platformStart && platformEnd && value) {
+        const timeValue = dayjs(value as Dayjs)
+        if (timeValue.isBefore(platformStart)) {
+          setTimeout(() => notify(`Peak hours must be after platform start time`, false), 0)
+        } else if (timeValue.isAfter(platformEnd)) {
+          setTimeout(() => notify(`Peak hours must be before platform end time`, false), 0)
+        }
+      }
+  
+      if (field === "end" || field === "endTime") {
+        let startTime = null
+  
+        if (courtIndex !== undefined) {
+          const peakHour = courtData[courtIndex]?.peakHours.find((hour) => hour.id === id)
+          if (peakHour?.start) {
+            startTime = dayjs(peakHour.start, "HH:mm a")
+          }
+        } else {
+          const peakHour = editFormData.peakHours.find((hour) => hour.id === id)
+          if (peakHour?.startTime) {
+            startTime = dayjs(peakHour.startTime, "HH:mm a")
+          }
+        }
+  
+        if (startTime && value && dayjs(value as Dayjs).isBefore(startTime)) {
+          setTimeout(() => notify("End time cannot be before start time", false), 0)
+        }
+      }
+    }
   }
-
   const handleAddCourt = () => {
     const existingNames = courtData.map((court) => court.name)
     let highestIndex = 0

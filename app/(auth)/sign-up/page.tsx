@@ -23,7 +23,7 @@ export default function SignUp() {
   }, []);
 
   const fetchLogo = async () => {
-    if (!supabase) return null;
+    if (!supabaseClient) return null;
     
     const { data, error } = await supabase
       .from('app_settings')
@@ -38,7 +38,7 @@ export default function SignUp() {
   };
 
   useEffect(() => {
-    if (supabase) {
+    if (supabaseClient) {
       const fetchLogoUrl = async () => {
         const logoUrl = await fetchLogo();
         setLogoUrl(logoUrl);
