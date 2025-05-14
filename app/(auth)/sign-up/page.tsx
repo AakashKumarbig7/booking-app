@@ -7,8 +7,6 @@ import { CheckCircle, Eye, EyeOff, TriangleAlert} from "lucide-react";
 import { toaster, Message} from 'rsuite';
 import { createClient } from "@/utils/supabase/client";
 
-const supabase = createClient();
-
 export default function SignUp() {
   const [message, setMessage] = useState<string | null>(null);
   const [password, setPassword] = useState<string>("");
@@ -17,26 +15,38 @@ export default function SignUp() {
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false); 
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [supabase, setSupabase] = useState<any>(null);
+
+  useEffect(() => {
+    // Initialize Supabase client only on client side
+    setSupabase(createClient());
+  }, []);
 
   const fetchLogo = async () => {
+    if (!supabase) return null;
+    
     const { data, error } = await supabase
       .from('app_settings')
       .select('logo')
       .single();
   
     if (error) {
+      console.error('Error fetching logo:', error);
       return null;
     }
     return data?.logo || null;
   };
 
   useEffect(() => {
-    const fetchLogoUrl = async () => {
-      const logoUrl = await fetchLogo();
-      setLogoUrl(logoUrl);
-    };
-    fetchLogoUrl();
-  }, []);
+    if (supabase) {
+      const fetchLogoUrl = async () => {
+        const logoUrl = await fetchLogo();
+        setLogoUrl(logoUrl);
+      };
+      fetchLogoUrl();
+    }
+  }, [supabase]);
+
 
   // Sign up handler
   const signUp = async (formData: FormData) => {
