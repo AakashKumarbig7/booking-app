@@ -15,38 +15,45 @@ export default function SignUp() {
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false); 
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [supabaseClient, setSupabaseClient] = useState<any>(null);
+  // const [supabaseClient, setSupabaseClient] = useState<any>(null);
 
-  useEffect(() => {
-    // Initialize Supabase client only on client side
-    setSupabaseClient(supabase);
-  }, []);
+  // useEffect(() => {
+  //   // Initialize Supabase client only on client side
+  //   setSupabaseClient(supabase);
+  // }, []);
 
-  const fetchLogo = async () => {
-    if (!supabaseClient) return null;
+  // const fetchLogo = async () => {
+  //   if (!supabaseClient) return null;
     
-    const { data, error } = await supabase
-      .from('app_settings')
-      .select('logo')
-      .single();
+  //   const { data, error } = await supabase
+  //     .from('app_settings')
+  //     .select('logo')
+  //     .single();
   
-    if (error) {
-      console.error('Error fetching logo:', error);
-      return null;
-    }
-    return data?.logo || null;
-  };
+  //   if (error) {
+  //     console.error('Error fetching logo:', error);
+  //     return null;
+  //   }
+  //   return data?.logo || null;
+  // };
 
   useEffect(() => {
-    if (supabaseClient) {
-      const fetchLogoUrl = async () => {
-        const logoUrl = await fetchLogo();
-        setLogoUrl(logoUrl);
-      };
-      fetchLogoUrl();
-    }
-  }, [supabaseClient]);
-
+    const fetchLogo = async () => {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('logo')
+        .single();
+  
+      if (error) {
+        console.error('Error fetching logo:', error);
+        return;
+      }
+  
+      setLogoUrl(data?.logo || null);
+    };
+  
+    fetchLogo();
+  }, []);
 
   // Sign up handler
   const signUp = async (formData: FormData) => {
