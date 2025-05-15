@@ -2,7 +2,7 @@
 import { FilePlus } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { supabase } from '@/utils/supabase/client';
+import { createClient } from '@/utils/supabase/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
 import {
@@ -61,7 +61,7 @@ const notify = (message: string, success: boolean) =>
   })
 
 const EmployeeAdd = () => {
-  // const supabase = createClient()
+  const supabase = createClient()
   const [openAdd, setOpenAdd] = useState(false)
   const [openEdit, setOpenEdit] = useState(false)
   const [openDelete, setOpenDelete] = useState(false)

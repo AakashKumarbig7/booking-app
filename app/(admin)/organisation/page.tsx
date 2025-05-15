@@ -11,7 +11,7 @@ import {
   SelectGroup,
 } from "@/components/ui/select";
 import { TimePicker } from "antd";
-import { supabase } from '@/utils/supabase/client';
+import { createClient} from '@/utils/supabase/client';
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import Holidays from "@/components/holiday";
@@ -52,7 +52,7 @@ const notify = (message: string, success: boolean) =>
 
 const Organisation = () => {
   const {user: currentUser} = useGlobalContext()
-  // const supabase = createClient();
+  const supabase = createClient();
   // const [loading, setLoading] = useState(true);
   const [timezone, setTimezone] = useState(
     "(+11:00) Australian Eastern Daylight Time (Australia/Melbourne)"

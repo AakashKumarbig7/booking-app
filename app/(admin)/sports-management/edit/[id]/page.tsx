@@ -11,7 +11,7 @@ import { Table } from "rsuite"
 import type { RowDataType } from "rsuite/esm/Table"
 import dayjs, { type Dayjs } from "dayjs"
 import { useGlobalContext } from "@/context/store"
-import { supabase } from '@/utils/supabase/client';
+import { createClient } from '@/utils/supabase/client';
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -122,7 +122,7 @@ export default function EditSportPage({
   params: Promise<{ id: string }>
 }) {
   const router = useRouter()
-  // const supabase = createClient()
+  const supabase = createClient()
   const { Column, HeaderCell, Cell } = Table
   const { user: currentUser } = useGlobalContext()
 

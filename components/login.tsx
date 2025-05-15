@@ -5,7 +5,7 @@ import { SubmitButton } from "../app/(auth)/login/submit-button";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import {  useSearchParams } from "next/navigation";
-import { supabase } from '@/utils/supabase/client';
+import { createClient } from '@/utils/supabase/client';
 import { toaster, Message } from "rsuite";
 
 // const supabase = createClient();
@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const supabase = createClient();
   
   // const router = useRouter();
   const searchParams = useSearchParams();
