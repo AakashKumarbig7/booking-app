@@ -1,4 +1,4 @@
-"use client";
+"use client"; 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +11,7 @@ import {
   SelectGroup,
 } from "@/components/ui/select";
 import { TimePicker } from "antd";
-import { createClient} from '@/utils/supabase/client';
+import { createClient} from '@/utils/supabase/client'; 
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import Holidays from "@/components/holiday";
