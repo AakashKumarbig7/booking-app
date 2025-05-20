@@ -1,8 +1,8 @@
 "use client"
-import { FilePlus } from "lucide-react"
+import { FilePlus, Search } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { createClient } from '@/utils/supabase/client';
+import { createClient } from "@/utils/supabase/client"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
 import {
@@ -18,7 +18,7 @@ import {
 import EmployeeForm from "./empForm"
 import EmployeeTable from "./empTable"
 import toast, { Toaster } from "react-hot-toast"
-
+import { createUser1 } from "@/app/(admin)/staff-management/action"
 
 interface Employee {
   employee_id?: string
@@ -37,8 +37,9 @@ interface Employee {
   last_name: string
   zipcode: string
   emp_id?: string
-  role: string // Made optional to match the expected type
+  role: string
   mobile_country_code?: string
+  userId?: string // Added userId field to store the auth user ID
 }
 
 // Define the validation interface
@@ -66,9 +67,28 @@ const EmployeeAdd = () => {
   const [openEdit, setOpenEdit] = useState(false)
   const [openDelete, setOpenDelete] = useState(false)
   const [employees, setEmployees] = useState<Employee[]>([])
-  // const [loading, setLoading] = useState(true)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
-  // const [currentUser, setCurrentUser] = useState<any>(null)
+  // const [isSubmitting, setIsSubmitting] = useState(false)
+  // const [debugInfo, setDebugInfo] = useState<string>("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]) 
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredEmployees(employees)
+      return
+    }
+
+    const lowercasedSearch = searchTerm.toLowerCase()
+    const filtered = employees.filter(
+      (employee) =>
+        employee.first_name?.toLowerCase().includes(lowercasedSearch) ||
+        employee.last_name?.toLowerCase().includes(lowercasedSearch) ||
+        `${employee.first_name} ${employee.last_name}`.toLowerCase().includes(lowercasedSearch) ||
+        employee.emp_id?.toLowerCase().includes(lowercasedSearch),
+    )
+
+    setFilteredEmployees(filtered)
+  }, [searchTerm, employees])
 
   // Form state
   const [formData, setFormData] = useState<Employee>({
@@ -100,17 +120,12 @@ const EmployeeAdd = () => {
   }, [])
 
   const fetchData = async () => {
-    // setLoading(true)
-
     // Get current authenticated user
     const { data: userData } = await supabase.auth.getUser()
 
     if (!userData?.user?.email) {
-      // setLoading(false)
       return
     }
-
-    // setCurrentUser(userData.user)
 
     // Fetch employees from the users table
     const { data, error } = await supabase.from("users").select("*")
@@ -120,8 +135,6 @@ const EmployeeAdd = () => {
     } else if (data) {
       setEmployees(data)
     }
-
-    // setLoading(false)
   }
 
   const handleInputChange = (id: string, value: string) => {
@@ -151,6 +164,7 @@ const EmployeeAdd = () => {
       emp_id: "",
       role: "",
     })
+    // setDebugInfo("")
   }
 
   const handleAddEmployee = async () => {
@@ -160,46 +174,92 @@ const EmployeeAdd = () => {
       return
     }
 
-    // Format mobile numbers by removing spaces for database
-    const formattedData = {
-      ...formData,
+    // setIsSubmitting(true)
+    // setDebugInfo("")
 
-      mobile: formData.mobile.replace(/\s+/g, ""),
-      emergency_mobile: formData.emergency_mobile.replace(/\s+/g, ""),
-    }
+    try {
+      // Format mobile numbers by removing spaces for database
+      const formattedData = {
+        ...formData,
+        mobile: formData.mobile.replace(/\s+/g, ""),
+        emergency_mobile: formData.emergency_mobile.replace(/\s+/g, ""),
+      }
 
-    // Insert new employee
-    const {  error } = await supabase.from("users")
-    .insert( {
-      employee_id: formattedData.employee_id,
-      password: formattedData.password,
-      first_name: formattedData.first_name,
-      last_name: formattedData.last_name,
-      email: formattedData.email,
-      mobile: formattedData.mobile,
-      joined_date: formattedData.joined_date,
-      designation: formattedData.designation,
-      blood_group: formattedData.blood_group,
-      address: formattedData.address,
-      city: formattedData.city,
-      state: formattedData.state,
-      country: formattedData.country,
-      zipcode: formattedData.zipcode,  
-      emergency_mobile: formattedData.emergency_mobile,
-      emp_id: formattedData.emp_id,
-      role: formattedData.role,
-    })
-    .select()
+      // First create the auth user
+      console.log("Creating auth user with email:", formattedData.email)
+      const signUpResponse = await createUser1(formattedData.email, formattedData.password || "")
 
-    if (error) {
-      console.error("Failed to add employee:", error.message)
-      notify("Failed to add employee: " + error.message, false)
-    } else {
-      console.log("Employee added successfully")
-      notify("Employee added successfully", true)
-      setOpenAdd(false)
-      resetForm()
-      fetchData()
+      // Debug: Log the full response
+      console.log("Auth user creation response:", JSON.stringify(signUpResponse, null, 2))
+      // setDebugInfo(`Auth Response: ${JSON.stringify(signUpResponse, null, 2)}`)
+
+      if (signUpResponse?.error) {
+        console.error("Failed to create auth user:", signUpResponse.error)
+        notify("Failed to create user account: " + signUpResponse.error.message, false)
+        // setIsSubmitting(false)
+        return
+      }
+
+      // Check if we have a valid user object
+      if (!signUpResponse?.data?.user) {
+        console.error("Auth user creation returned no user")
+        notify("Failed to create user account: No user returned", false)
+        // setIsSubmitting(false)
+        return
+      }
+
+      // Get the user ID from the auth response
+      const userId = signUpResponse.data.user.id
+      console.log("Auth user created with ID:", userId)
+
+      if (!userId) {
+        console.error("Auth user ID is null or undefined")
+        notify("Failed to get user ID from auth response", false)
+        // setIsSubmitting(false)
+        return
+      }
+
+      // Insert new employee with the userId
+      const { data, error } = await supabase
+        .from("users")
+        .insert({
+          employee_id: formattedData.employee_id,
+          password: formattedData.password,
+          first_name: formattedData.first_name,
+          last_name: formattedData.last_name,
+          email: formattedData.email,
+          mobile: formattedData.mobile,
+          joined_date: formattedData.joined_date,
+          designation: formattedData.designation,
+          blood_group: formattedData.blood_group,
+          address: formattedData.address,
+          city: formattedData.city,
+          state: formattedData.state,
+          country: formattedData.country,
+          zipcode: formattedData.zipcode,
+          emergency_mobile: formattedData.emergency_mobile,
+          emp_id: formattedData.emp_id,
+          role: formattedData.role,
+          userId: userId, // Store the auth user ID
+        })
+        .select()
+
+      if (error) {
+        console.error("Failed to add employee:", error.message)
+        notify("Failed to add employee: " + error.message, false)
+      } else {
+        console.log("Employee added successfully with data:", data)
+        notify("Employee added successfully", true)
+        setOpenAdd(false)
+        resetForm()
+        fetchData()
+      }
+    } catch (error) {
+      console.error("Error in employee creation:", error)
+      // setDebugInfo(`Error: ${JSON.stringify(error)}`)
+      notify("An unexpected error occurred", false)
+    } finally {
+      // setIsSubmitting(false)
     }
   }
 
@@ -220,53 +280,62 @@ const EmployeeAdd = () => {
     console.log(selectedEmployee?.emp_id, "working")
     if (!selectedEmployee?.emp_id) return
 
-    // Validate all fields before submission
-    if (formRef.current && !formRef.current.validateAllFields()) {
-      notify("Please fix the validation errors", false)
-      return
-    }
+    // setIsSubmitting(true)
 
-    // Format mobile numbers by removing spaces for database
-    const formattedData = {
-      ...formData,
-      mobile: (formData.mobile || "").toString().replace(/\s+/g, ""),
-emergency_mobile: (formData.emergency_mobile || "").toString().replace(/\s+/g, ""),
+    try {
+      // Validate all fields before submission
+      if (formRef.current && !formRef.current.validateAllFields()) {
+        notify("Please fix the validation errors", false)
+        // setIsSubmitting(false)
+        return
+      }
 
-    }
+      // Format mobile numbers by removing spaces for database
+      const formattedData = {
+        ...formData,
+        mobile: (formData.mobile || "").toString().replace(/\s+/g, ""),
+        emergency_mobile: (formData.emergency_mobile || "").toString().replace(/\s+/g, ""),
+      }
 
-    // Update employee
-    const { error } = await supabase
-      .from("users")
-      .update({
-        employee_id: formattedData.employee_id,
-        password: formattedData.password,
-        first_name: formattedData.first_name,
-        last_name: formattedData.last_name,
-        email: formattedData.email,
-        mobile: formattedData.mobile,
-        joined_date: formattedData.joined_date,
-        designation: formattedData.designation,
-        blood_group: formattedData.blood_group,
-        address: formattedData.address,
-        city: formattedData.city,
-        state: formattedData.state,
-        country: formattedData.country,
-        zipcode: formattedData.zipcode,
-        emergency_mobile: formattedData.emergency_mobile,
-        emp_id: formattedData.emp_id,
-        role: formattedData.role,
-      })
-      .eq("emp_id", selectedEmployee.emp_id)
+      // Update employee
+      const { error } = await supabase
+        .from("users")
+        .update({
+          employee_id: formattedData.employee_id,
+          password: formattedData.password,
+          first_name: formattedData.first_name,
+          last_name: formattedData.last_name,
+          email: formattedData.email,
+          mobile: formattedData.mobile,
+          joined_date: formattedData.joined_date,
+          designation: formattedData.designation,
+          blood_group: formattedData.blood_group,
+          address: formattedData.address,
+          city: formattedData.city,
+          state: formattedData.state,
+          country: formattedData.country,
+          zipcode: formattedData.zipcode,
+          emergency_mobile: formattedData.emergency_mobile,
+          emp_id: formattedData.emp_id,
+          role: formattedData.role,
+        })
+        .eq("emp_id", selectedEmployee.emp_id)
 
-    if (error) {
-      console.error("Failed to update employee:", error.message)
-      notify("Failed to update employee: " + error.message, false)
-    } else {
-      console.log("Employee updated successfully")
-      notify("Employee updated successfully", true)
-      setOpenEdit(false)
-      resetForm()
-      fetchData()
+      if (error) {
+        console.error("Failed to update employee:", error.message)
+        notify("Failed to update employee: " + error.message, false)
+      } else {
+        console.log("Employee updated successfully")
+        notify("Employee updated successfully", true)
+        setOpenEdit(false)
+        resetForm()
+        fetchData()
+      }
+    } catch (error) {
+      console.error("Error in employee update:", error)
+      notify("An unexpected error occurred", false)
+    } finally {
+      // setIsSubmitting(false)
     }
   }
 
@@ -278,17 +347,26 @@ emergency_mobile: (formData.emergency_mobile || "").toString().replace(/\s+/g, "
   const handleDeleteEmployee = async () => {
     if (!selectedEmployee?.emp_id) return
 
-    // Delete employee
-    const { error } = await supabase.from("users").delete().eq("emp_id", selectedEmployee.emp_id)
+    // setIsSubmitting(true)
 
-    if (error) {
-      console.error("Failed to delete employee:", error.message)
-    } else {
-      console.log("Employee deleted successfully")
-      notify("Employee deleted successfully", true)
+    try {
+      // Delete employee
+      const { error } = await supabase.from("users").delete().eq("emp_id", selectedEmployee.emp_id)
 
-      setOpenDelete(false)
-      fetchData()
+      if (error) {
+        console.error("Failed to delete employee:", error.message)
+        notify("Failed to delete employee: " + error.message, false)
+      } else {
+        console.log("Employee deleted successfully")
+        notify("Employee deleted successfully", true)
+        setOpenDelete(false)
+        fetchData()
+      }
+    } catch (error) {
+      console.error("Error in employee deletion:", error)
+      notify("An unexpected error occurred", false)
+    } finally {
+      // setIsSubmitting(false)
     }
   }
 
@@ -300,10 +378,22 @@ emergency_mobile: (formData.emergency_mobile || "").toString().replace(/\s+/g, "
 
   return (
     <>
+   
       {/* Add Employee Sheet */}
       <Sheet open={openAdd} onOpenChange={setOpenAdd}>
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-between mb-4 pt-3">
           <Toaster />
+          <div className="w-[300px]">
+            <input
+              type="text"
+              placeholder="Search"
+              className="border border-gray-300 rounded-md px-3 py-2 w-full text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+              <Search className="relative left-[280px] bottom-7 z-10 text-gray-500" size={16} />
+          </div>
+          
           <SheetTrigger asChild>
             <div
               className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] w-[130px] h-[40px] flex items-center justify-center text-xs cursor-pointer"
@@ -321,19 +411,29 @@ emergency_mobile: (formData.emergency_mobile || "").toString().replace(/\s+/g, "
 
           <EmployeeForm formData={formData} handleInputChange={handleInputChange} ref={formRef} />
 
-          {/* Footer: Save & Cancel */}
-         
-          <div className="mt-3 pt-3 flex  gap-2 px-3 pb-2">
-          <div
-              className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] w-[100px] h-[40px] flex items-center justify-center text-xs cursor-pointer"
-              onClick={handleAddEmployee}
-            >
-              Save
+          {/* Debug Info */}
+          {/* {debugInfo && (
+            <div className="px-3 mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto max-h-32">
+              <p className="font-semibold">Debug Info:</p>
+              <pre>{debugInfo}</pre>
             </div>
-            <Button variant="outline" onClick={() => setOpenAdd(false)}>
+          )} */}
+
+          {/* Footer: Save & Cancel */}
+          <div className="mt-3 pt-3 flex gap-2 px-3 pb-2">
+            <Button
+              className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] w-[100px] h-[40px] flex items-center justify-center text-xs"
+              onClick={handleAddEmployee}
+              // disabled={isSubmitting}
+            >
+              {/* {isSubmitting ? "Saving..." : "Save"} */}
+              Save
+            </Button>
+            <Button variant="outline" onClick={() => setOpenAdd(false)} 
+            // disabled={isSubmitting}
+            >
               Cancel
             </Button>
-           
           </div>
         </SheetContent>
       </Sheet>
@@ -345,17 +445,20 @@ emergency_mobile: (formData.emergency_mobile || "").toString().replace(/\s+/g, "
             <SheetTitle className="text-gray-600 text-sm -mt-1 uppercase overflow-hidden">Edit Employee</SheetTitle>
           </SheetHeader>
 
-          <EmployeeForm formData={formData} handleInputChange={handleInputChange} 
-          // isEdit={true} 
-          ref={formRef} />
+          <EmployeeForm formData={formData} handleInputChange={handleInputChange} ref={formRef} />
 
           {/* Footer: Save & Cancel */}
-          <div className="mt-3 pt-3 flex  gap-2 px-3 pb-2">
-            <Button className="bg-teal-800" onClick={handleEditEmployee}>
+          <div className="mt-3 pt-3 flex gap-2 px-3 pb-2">
+            <Button className="bg-teal-800 hover:bg-teal-700" onClick={handleEditEmployee} 
+            // disabled={isSubmitting}
+            >
+              {/* {isSubmitting ? "Updating..." : "Update"} */}
               Update
             </Button>
 
-            <Button variant="outline" onClick={() => setOpenEdit(false)}>
+            <Button variant="outline" onClick={() => setOpenEdit(false)} 
+            // disabled={isSubmitting}
+            >
               Cancel
             </Button>
           </div>
@@ -374,7 +477,12 @@ emergency_mobile: (formData.emergency_mobile || "").toString().replace(/\s+/g, "
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteEmployee} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={handleDeleteEmployee}
+              className="bg-red-600 hover:bg-red-700"
+              // disabled={isSubmitting}
+            >
+              {/* {isSubmitting ? "Deleting..." : "Delete"} */}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -382,12 +490,7 @@ emergency_mobile: (formData.emergency_mobile || "").toString().replace(/\s+/g, "
       </AlertDialog>
 
       {/* Employee Table */}
-      <EmployeeTable
-        employees={employees}
-        // loading={loading}
-        onEditClick={handleEditClick}
-        onDeleteClick={handleDeleteClick}
-      />
+      <EmployeeTable employees={filteredEmployees} onEditClick={handleEditClick} onDeleteClick={handleDeleteClick} />
     </>
   )
 }

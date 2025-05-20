@@ -724,7 +724,7 @@ console.log("user",user)
                       ) : (
                         "Cancel"
                       )} */}
-                  
+                  cancel
                 </button>
                 <button
                   className="px-8 py-2 text-xs border border-gray-200 rounded-[6px] bg-teal-800 text-white hover:bg-teal-700"

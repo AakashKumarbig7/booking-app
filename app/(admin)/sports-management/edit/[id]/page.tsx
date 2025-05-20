@@ -451,7 +451,7 @@ export default function EditSportPage({
         }
 
         const lastPeakHour = newData[courtIndex].peakHours[newData[courtIndex].peakHours.length - 1]
-        if (lastPeakHour && (!lastPeakHour.start || !lastPeakHour.end || !lastPeakHour.fee)) {
+        if (lastPeakHour && (!lastPeakHour.start || !lastPeakHour.end )) {
           notify("Please complete the current peak hour details for this court before adding a new one", false)
           return prev
         }
@@ -460,7 +460,7 @@ export default function EditSportPage({
           id: crypto.randomUUID(),
           start: null,
           end: null,
-          fee: 0,
+          fee:  lastPeakHour.fee,
         })
 
         return newData
@@ -468,7 +468,7 @@ export default function EditSportPage({
     } else {
       setEditFormData((prev) => {
         const lastPeakHour = prev.peakHours[prev.peakHours.length - 1]
-        if (lastPeakHour && (!lastPeakHour.startTime || !lastPeakHour.endTime || !lastPeakHour.fee)) {
+        if (lastPeakHour && (!lastPeakHour.startTime || !lastPeakHour.endTime )) {
           notify("Please complete the current peak hour details before adding a new one", false)
           return prev
         }
@@ -691,7 +691,7 @@ export default function EditSportPage({
               <Label className="text-gray-900 text-sm font-medium">Sport Name</Label>
               <Input
                 type="text"
-                placeholder="Badminton / Tennis / Cricket..."
+                placeholder="e.g Badminton"
                 className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
                 value={editFormData.sport_name || ""}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -742,7 +742,7 @@ export default function EditSportPage({
               <Label className="text-gray-900 text-sm font-medium">Platform Name</Label>
               <input
                 type="text"
-                placeholder="courtA,courtB,courtC"
+                placeholder="e.g CourtA or Court1"
                 className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
                 value={editFormData.platformName}
                 onChange={(e) => handleEditInputChange("platformName", e.target.value)}
@@ -755,11 +755,10 @@ export default function EditSportPage({
               <Label className="text-gray-900 text-sm font-medium">No. of Platform</Label>
               <input
                 type="number"
-                placeholder="2"
+                placeholder="e.g 2"
                 className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
                 value={editFormData.platformCount}
                 onChange={(e) => handleEditInputChange("platformCount", e.target.value)}
-                min={0}
               />
             </div>
 
@@ -773,6 +772,7 @@ export default function EditSportPage({
                   placeholder="Start"
                   className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                   onChange={(time) => handleEditInputChange("startTime", time)}
+                  needConfirm={false}
                 />
                 <span className="text-gray-500">to</span>
                 <TimePicker
@@ -782,22 +782,22 @@ export default function EditSportPage({
                   placeholder="End"
                   className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                   onChange={handleEndTimeChange}
+                  needConfirm={false}
                 />
               </div>
             </div>
-            <div className="flex gap-4">
+            {/* <div className="flex gap-4">
               <div className="flex-1 space-y-2">
                 <Label className="text-gray-900 text-sm font-medium">Regular Fee</Label>
                 <input
                   type="number"
-                  placeholder="12.99"
+                  placeholder="e.g 10"
                   className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
                   value={editFormData.regularFee}
                   onChange={(e) => handleEditInputChange("regularFee", e.target.value)}
-                  min={0}
-                />
+                 />
               </div>
-            </div>
+            </div> */}
           </div>
 
           <div className="flex gap-4">
@@ -888,16 +888,23 @@ export default function EditSportPage({
                 <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>REG FEE</HeaderCell>
                 <Cell>
                   {(rowData: RowDataType, index?: number) => (
+                    <div className="relative">
+                    {rowData.fees?.regular ? (
+                      <span className="absolute left-4 top-4.5 -translate-y-1/2 text-gray-500 text-xs">$</span>
+                    ) : null}
                     <Input
                       type="number"
+                      placeholder="e.g 10"
                       value={rowData.fees?.regular || ""}
                       onChange={(e) =>
                         index !== undefined &&
                         handleCourtUpdate(index, "fees.regular", Number.parseFloat(e.target.value) || "")
                       }
-                      className="w-full border border-zinc-300 rounded-md bg-gray-50 p-1 text-xs text-gray-700"
+                      className="w-full border border-zinc-300 rounded-md bg-gray-50 p-1 pl-6 text-xs text-gray-700"
                       disabled={!rowData?.availability}
                     />
+                  </div>
+                  
                   )}
                 </Cell>
               </Column>
@@ -919,6 +926,7 @@ export default function EditSportPage({
                               className="!border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                               disabled={!rowData?.availability}
                               placeholder="Start"
+                              needConfirm={false}
                             />
                             <span>to</span>
                             <TimePicker
@@ -931,17 +939,23 @@ export default function EditSportPage({
                               className="!border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                               disabled={!rowData?.availability}
                               placeholder="End"
+                                needConfirm={false}
                             />
+                            <div className="relative">
+                              {peak.fee ?
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-xs">$</span> :
+                            null}
                             <Input
                               type="number"
                               value={peak.fee || ""}
                               onChange={(e) =>
                                 index !== undefined && handlePeakHourChange(peak.id, "fee", e.target.value, index)
                               }
-                              className="w-20 border border-zinc-300 rounded-md bg-gray-50 p-1 text-xs text-gray-700"
+                              className="w-20 border border-zinc-300 rounded-md bg-gray-50 p-1 pl-6 text-xs text-gray-700"
                               disabled={!rowData?.availability}
-                              placeholder="Fee"
+                              placeholder="e.g $15"
                             />
+                            </div>
                             {rowData.peakHours.length > 1 && (
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -1011,7 +1025,7 @@ export default function EditSportPage({
                         onCheckedChange={(checked) =>
                           index !== undefined && handleCourtUpdate(index, "availability", checked)
                         }
-                        className="data-[state=checked]:bg-teal-500"
+                        className="data-[state=checked]:bg-teal-800"
                       />
                     </div>
                   )}
@@ -1059,7 +1073,7 @@ export default function EditSportPage({
 
         <div className="w-full flex justify-end border border-bgborder_color rounded-[6px] bg-white p-2 gap-2">
           <button
-            className="border border-zinc-300 rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center cursor-pointer"
+            className="border border-zinc-300 rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center cursor-pointer hover:bg-gray-50"
             onClick={() => {
               setCancelLoader(true)
               setTimeout(() => {

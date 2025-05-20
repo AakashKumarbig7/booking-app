@@ -82,17 +82,35 @@ const SideBar = () => {
       >
         <div className="flex justify-between items-center px-3 py-2">
           <div className="flex items-center">
-            <Image
+            {/* <Image
               src="/images/s22logo.png"
               alt="Logo"
               width={collapsed && !isHovered ? 40 : 106}
               height={40}
               className="py-1"
+            /> */}
+            {collapsed && !isHovered ? (
+              <Image
+              src="/images/cropped-favicon-180x180.png"
+              alt="Logo"
+              width={106}
+              height={40}
+              className="py-1"
             />
+              
+            ) : (
+              <Image
+              src="/images/s22logo.png"
+              alt="Logo"
+              width={106}
+              height={40}
+              className="pt-3"
+            />
+            )}
           </div>
           <div className="flex space-x-1">
             {(!collapsed || isHovered) && (
-              <button className="text-white p-1 rounded hover:bg-teal-800 ">
+              <button className="text-white p-1 rounded hover:bg-teal-800">
                 <Bell size={16} />
               </button>
             )}

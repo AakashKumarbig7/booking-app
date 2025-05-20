@@ -37,7 +37,7 @@ type PermissionCategory = {
 };
 
 type DataItem = {
-  name: string;
+
   role: string;
   permissions: PermissionCategory[];
   id: string;
@@ -182,8 +182,9 @@ const AccessLevel = () => {
   };
 
   const AddDepartment = () => {
+    
     setEditData({
-      name: "",
+     
       role: "",
       permissions: allPermission,
       id: Math.random().toString(36).substring(2, 9),
@@ -395,7 +396,9 @@ const AccessLevel = () => {
                     <div className="relative flex items-center gap-2 w-full">
                       <RoleSelector
                         value={editData?.role || ""}
-                        onChange={(value) => editData && setEditData({ ...editData, role: value })}
+                        onChange={(value) =>{
+                          console.log("value",value);
+                           editData && setEditData({ ...editData, role: value })}}
                         error={!editData?.role ? "Role is required" : undefined}
                       />
                     </div>

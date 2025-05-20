@@ -188,7 +188,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             </Label>
             <Input
               id="emp_id"
-              placeholder="Employee ID"
+              placeholder="e.g emp001"
               value={formData.emp_id || ""}
               onChange={(e) => {
                 handleInputChange(e.target.id, e.target.value);
@@ -211,7 +211,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             <Input
               id="password"
               type="number"
-              placeholder="123456"
+              placeholder="e.g 123456"
               value={formData.password || ""}
               onChange={(e) => {
                 handleInputChange(e.target.id, e.target.value);
@@ -237,7 +237,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             </Label>
             <Input
               id="first_name"
-              placeholder="First Name"
+              placeholder="e.g John"
               value={formData.first_name || ""}
               onChange={(e) => {
                 handleInputChange(e.target.id, e.target.value);
@@ -259,7 +259,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             </Label>
             <Input
               id="last_name"
-              placeholder="Last Name"
+              placeholder="e.g smith"
               value={formData.last_name || ""}
               onChange={(e) => {
                 handleInputChange(e.target.id, e.target.value);
@@ -285,7 +285,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             </Label>
             <Input
               id="email"
-              placeholder="Email"
+              placeholder="e.g john@gmail.com"
               value={formData.email || ""}
               onChange={(e) => {
                 handleInputChange(e.target.id, e.target.value);
@@ -329,7 +329,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
               </select>
               <Input
                 id="mobile"
-                placeholder="123456789"
+                placeholder=""
                 value={formData.mobile || ""}
                 onChange={(e) => handlePhoneNumberChange("mobile", e.target.value)}
               />
@@ -357,7 +357,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             </Label>
             <Input
               id="designation"
-              placeholder="Designation"
+              placeholder="e.g Booking Staff"
               value={formData.designation || ""}
               onChange={(e) => {
                 handleInputChange(e.target.id, e.target.value);
@@ -405,7 +405,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             </Label>
             <Input
               id="address"
-              placeholder="Address"
+              placeholder="e.g 123 Main St"
               value={formData.address || ""}
               onChange={(e) => {
                 handleInputChange(e.target.id, e.target.value);
@@ -432,7 +432,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             </Label>
             <Input
               id="city"
-              placeholder="Sydney"
+              placeholder="e.g New South Wales"
               value={formData.city || ""}
               onChange={(e) => {
                 handleInputChange(e.target.id, e.target.value);
@@ -454,7 +454,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             </Label>
             <Input
               id="state"
-              placeholder="NSW"
+              placeholder="e.g Sydney"
               value={formData.state || ""}
               onChange={(e) => {
                 handleInputChange(e.target.id, e.target.value);
@@ -480,7 +480,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             </Label>
             <Input
               id="country"
-              placeholder="Australia"
+              placeholder="e.g Australia"
               value={formData.country || ""}
               onChange={(e) => {
                 handleInputChange(e.target.id, e.target.value);
@@ -502,7 +502,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
             </Label>
             <Input
               id="zipcode"
-              placeholder="2000"
+              placeholder="e.g 2000"
               value={formData.zipcode || ""}
               onChange={(e) => {
                 handleInputChange(e.target.id, e.target.value);
@@ -550,7 +550,7 @@ const EmployeeForm = forwardRef<{ validateAllFields: () => boolean; errors: Vali
               </select>
               <Input
                 id="emergency_mobile"
-                placeholder="123456789"
+                placeholder=""
                 value={formData.emergency_mobile || ""}
                 onChange={(e) => handlePhoneNumberChange("emergency_mobile", e.target.value)}
               />

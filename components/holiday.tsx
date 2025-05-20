@@ -222,12 +222,13 @@ const Holidays = () => {
             <SheetDescription>
               <div className="flex flex-col gap-2">
                 <div className="flex flex-col gap-1 py-2">
-                  <label className="text-gray-800 text-xs font-medium">
+                  <label className="text-gray-900 text-sm font-medium">
                     Reason
                   </label>
                   <input
                     type="text"
-                    className="border border-border_color w-full rounded-[12px] px-4 h-10 pr-5 text-xs bg-gray-50"
+                    placeholder="e.g Christmas"
+                    className="border border-border_color w-full rounded-[12px] px-4 h-10 pr-5 text-xs bg-white"
                     value={editData?.name || ""}
                     onChange={(e) =>
                       setEditData({ ...editData!, name: e.target.value })
@@ -275,7 +276,7 @@ const Holidays = () => {
                   Save Holiday
                 </button>
                 <button
-                  className="border border-border_color rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2"
+                  className="border border-border_color rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2 cursor-pointer hover:bg-gray-50"
                   onClick={() => setOpenAdd(false)}
                 >
                   Cancel
@@ -384,14 +385,15 @@ const Holidays = () => {
                           Edit Holiday
                         </SheetTitle>
                         <SheetDescription>
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-2 py-2">
                             <div>
                               <label className="text-gray-900 text-sm font-medium">
-                                Description
+                           Reason
                               </label>
                               <input
                                 type="text"
-                                className="border border-border_color w-full rounded-[12px] px-4 h-10 pr-5 text-xs bg-gray-50"
+                                placeholder="e.g Christmas"
+                                className="border border-border_color w-full rounded-[12px] px-4 h-10 pr-5 text-xs bg-white mt-1"
                                 value={editData?.name || ""}
                                 onChange={(e) =>
                                   setEditData({
@@ -442,7 +444,7 @@ const Holidays = () => {
                               Update
                             </button>
                             <button
-                              className="border border-border_color rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2"
+                              className="border border-border_color rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2 cursor-pointer hover:bg-gray-50"
                               onClick={() => setOpenEdit(false)}
                             >
                               Cancel

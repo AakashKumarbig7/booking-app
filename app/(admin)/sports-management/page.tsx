@@ -1,22 +1,35 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect, useCallback } from "react"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { TimePicker } from "antd"
-import { Switch } from "@/components/ui/switch"
-import { FilePlus, SquarePen, Trash2 } from "lucide-react"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Table } from "rsuite"
-import type { RowDataType } from "rsuite/esm/Table"
-import dayjs from "dayjs"
-import { useGlobalContext } from "@/context/store"
-import { createClient } from '@/utils/supabase/client';
-import { useRouter } from "next/navigation"
-import BadmintonIcon, { getSportIcon } from "@/components/sport-icons"
-import toast from "react-hot-toast"
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { TimePicker } from "antd";
+import { Switch } from "@/components/ui/switch";
+import { FilePlus, Search, SquarePen, Trash2 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Table } from "rsuite";
+import type { RowDataType } from "rsuite/esm/Table";
+import dayjs from "dayjs";
+import { useGlobalContext } from "@/context/store";
+import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
+import BadmintonIcon, { getSportIcon } from "@/components/sport-icons";
+import toast from "react-hot-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,97 +40,96 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Input } from "@/components/ui/input"
-type FormValue = 
-  | string 
-  | number 
-  | boolean 
-  | dayjs.Dayjs 
-  | PeakHour[] 
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+type FormValue =
+  | string
+  | number
+  | boolean
+  | dayjs.Dayjs
+  | PeakHour[]
   | { [key: string]: boolean }
   | null;
 
-
 interface CourtSettings {
   peakHours: Array<{
-    start: string | null
-    end: string | null
-    fee: number
-  }>
+    start: string | null;
+    end: string | null;
+    fee: number;
+  }>;
   nonPeakHours: {
-    start: string | null
-    end: string | null
-  }
+    start: string | null;
+    end: string | null;
+  };
   fees: {
-    regular: number
-  }
-  availability: boolean
+    regular: number;
+  };
+  availability: boolean;
 }
 
 interface CourtsData {
-  [courtName: string]: CourtSettings
+  [courtName: string]: CourtSettings;
 }
 
 interface SportData {
-  id: number
-  icon: string
-  sport_name: string
-  courts: string[]
-  availability: boolean
-  platform_count: number
+  id: number;
+  icon: string;
+  sport_name: string;
+  courts: string[];
+  availability: boolean;
+  platform_count: number;
   timing: {
-    start: string | null
-    end: string | null
-  }
+    start: string | null;
+    end: string | null;
+  };
   days: {
-    [key: string]: boolean
-  }
-  status: string
+    [key: string]: boolean;
+  };
+  status: string;
   nonPeakHours?: {
-    start: string | null
-    end: string | null
-  }
+    start: string | null;
+    end: string | null;
+  };
   peakHours?: Array<{
-    start: string | null
-    end: string | null
-    fee: number
-  }>
+    start: string | null;
+    end: string | null;
+    fee: number;
+  }>;
   fees?: {
-    regular: number
-  }
-  courtsData?: CourtsData
-  available_court_count?: number
+    regular: number;
+  };
+  courtsData?: CourtsData;
+  available_court_count?: number;
 }
 
 interface PeakHour {
-  id: string
-  startTime: dayjs.Dayjs | null
-  endTime: dayjs.Dayjs | null
-  fee: string
+  id: string;
+  startTime: dayjs.Dayjs | null;
+  endTime: dayjs.Dayjs | null;
+  fee: string;
 }
 
 interface FormData {
-  sport_name: string
-  icon: string
-  sportStatus: string
-  platformName: string
-  platformCount: string
-  startTime: dayjs.Dayjs | null
-  endTime: dayjs.Dayjs | null
-  nonPeakStartTime: dayjs.Dayjs | null
-  nonPeakEndTime: dayjs.Dayjs | null
-  peakHours: PeakHour[]
-  regularFee: string
+  sport_name: string;
+  icon: string;
+  sportStatus: string;
+  platformName: string;
+  platformCount: string;
+  startTime: dayjs.Dayjs | null;
+  endTime: dayjs.Dayjs | null;
+  nonPeakStartTime: dayjs.Dayjs | null;
+  nonPeakEndTime: dayjs.Dayjs | null;
+  peakHours: PeakHour[];
+  regularFee: string;
   days: {
-    Mon: boolean
-    Tue: boolean
-    Wed: boolean
-    Thu: boolean
-    Fri: boolean
-    Sat: boolean
-    Sun: boolean
-  }
+    Mon: boolean;
+    Tue: boolean;
+    Wed: boolean;
+    Thu: boolean;
+    Fri: boolean;
+    Sat: boolean;
+    Sun: boolean;
+  };
 }
 
 const notify = (message: string, success: boolean) =>
@@ -129,16 +141,16 @@ const notify = (message: string, success: boolean) =>
     },
     position: "top-right",
     duration: 3000,
-  })
+  });
 
 export default function SportsManagementPage() {
-  const router = useRouter()
-const supabase = createClient()
-  const [openAdd, setOpenAdd] = useState(false)
-  const { Column, HeaderCell, Cell } = Table
-  const { user: currentUser } = useGlobalContext()
-  const [sportData, setSportData] = useState<SportData[]>([])
-  const [timeFormat, setTimeFormat] = useState("12 hours")
+  const router = useRouter();
+  const supabase = createClient();
+  const [openAdd, setOpenAdd] = useState(false);
+  const { Column, HeaderCell, Cell } = Table;
+  const { user: currentUser } = useGlobalContext();
+  const [sportData, setSportData] = useState<SportData[]>([]);
+  const [timeFormat, setTimeFormat] = useState("12 hours");
   const [formData, setFormData] = useState<FormData>({
     sport_name: "",
     icon: "",
@@ -149,7 +161,9 @@ const supabase = createClient()
     endTime: null,
     nonPeakStartTime: null,
     nonPeakEndTime: null,
-    peakHours: [{ id: crypto.randomUUID(), startTime: null, endTime: null, fee: "" }],
+    peakHours: [
+      { id: crypto.randomUUID(), startTime: null, endTime: null, fee: "" },
+    ],
     regularFee: "",
     days: {
       Mon: false,
@@ -160,80 +174,85 @@ const supabase = createClient()
       Sat: false,
       Sun: false,
     },
-  })
+  });
 
-  const [sportIdToDelete, setSportIdToDelete] = useState<number | null>(null)
-  const [editLoaderId, setEditLoaderId] = useState<number | null>(null)
+  const [sportIdToDelete, setSportIdToDelete] = useState<number | null>(null);
+  const [editLoaderId, setEditLoaderId] = useState<number | null>(null);
+  const [searchSports, setSearchSports] = useState<string>("");
 
   const getAvailableCourtCount = useCallback((sport: SportData): number => {
-    if (!sport.availability) return 0
+    if (!sport.availability) return 0;
 
     if (sport.courtsData) {
-      return Object.values(sport.courtsData).filter((court: CourtSettings) => court.availability).length
+      return Object.values(sport.courtsData).filter(
+        (court: CourtSettings) => court.availability
+      ).length;
     }
 
-    return sport.courts?.length || 0
-  }, [])
+    return sport.courts?.length || 0;
+  }, []);
 
   const fetchSportsData = useCallback(async () => {
     try {
       if (!currentUser?.email) {
-        console.log("No current user available")
-        return
+        console.log("No current user available");
+        return;
       }
 
       const { data, error } = await supabase
         .from("companies")
         .select("sports_management,time_format")
         .eq("store_admin", currentUser?.email)
-        .single()
+        .single();
 
       if (error) {
-        console.error("Error fetching data:", error)
-        return
+        console.error("Error fetching data:", error);
+        return;
       }
 
       if (data) {
-        console.log("Fetched data:", data)
-        setTimeFormat(data.time_format)
+        console.log("Fetched data:", data);
+        setTimeFormat(data.time_format);
         if (data.sports_management) {
-          const transformedData = data.sports_management.map((item: SportData) => ({
-            id: item.id,
-            icon: item.icon,
-            sport_name: item.sport_name,
-            courts: item.courts || [],
-            availability: item.availability,
-            platform_count: item.courts?.length || 0,
-            timing: item.timing || { start: null, end: null },
-            days: item.days || {
-              Mon: false,
-              Tue: false,
-              Wed: false,
-              Thu: false,
-              Fri: false,
-              Sat: false,
-              Sun: false,
-            },
-            status: item.status,
-            nonPeakHours: item.nonPeakHours || { start: null, end: null },
-            peakHours: item.peakHours || [],
-            fees: item.fees || { regular: 0 },
-            courtsData: item.courtsData || {},
-            available_court_count: getAvailableCourtCount(item),
-          }))
+          const transformedData = data.sports_management.map(
+            (item: SportData) => ({
+              id: item.id,
+              icon: item.icon,
+              sport_name: item.sport_name,
+              courts: item.courts || [],
+              availability: item.availability,
+              platform_count: item.courts?.length || 0,
+              timing: item.timing || { start: null, end: null },
+              days: item.days || {
+                Mon: false,
+                Tue: false,
+                Wed: false,
+                Thu: false,
+                Fri: false,
+                Sat: false,
+                Sun: false,
+              },
+              status: item.status,
+              nonPeakHours: item.nonPeakHours || { start: null, end: null },
+              peakHours: item.peakHours || [],
+              fees: item.fees || { regular: 0 },
+              courtsData: item.courtsData || {},
+              available_court_count: getAvailableCourtCount(item),
+            })
+          );
 
-          setSportData(transformedData)
-          console.log("Sports Management Data:", transformedData)
+          setSportData(transformedData);
+          console.log("Sports Management Data:", transformedData);
         }
       }
     } catch (error) {
-      console.error("Error fetching sports management data:", error)
+      console.error("Error fetching sports management data:", error);
     }
-  }, [currentUser?.email, getAvailableCourtCount, supabase])
+  }, [currentUser?.email, getAvailableCourtCount, supabase]);
 
   useEffect(() => {
-    fetchSportsData()
-  }, [fetchSportsData, currentUser])
+    fetchSportsData();
+  }, [fetchSportsData, currentUser]);
 
   const handleToggleAvailability = async (id: number) => {
     try {
@@ -241,50 +260,52 @@ const supabase = createClient()
         .from("companies")
         .select("sports_management")
         .eq("store_admin", currentUser?.email)
-        .single()
+        .single();
 
-      if (fetchError) throw fetchError
+      if (fetchError) throw fetchError;
 
       if (!data || !data.sports_management) {
-        console.error("No sports management data found")
-        return
+        console.error("No sports management data found");
+        return;
       }
 
       const updatedSportsData = data.sports_management.map((sport: SportData) =>
-        sport.id === id ? { ...sport, availability: !sport.availability } : sport,
-      )
+        sport.id === id
+          ? { ...sport, availability: !sport.availability }
+          : sport
+      );
 
       const { error } = await supabase
         .from("companies")
         .update({
           sports_management: updatedSportsData,
         })
-        .eq("store_admin", currentUser?.email)
+        .eq("store_admin", currentUser?.email);
 
-      if (error) throw error
+      if (error) throw error;
 
-      fetchSportsData()
+      fetchSportsData();
     } catch (error) {
-      console.error("Error updating availability:", error)
+      console.error("Error updating availability:", error);
     }
-  }
+  };
 
   const handleInputChange = (field: keyof FormData, value: FormValue) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
-    }))
-  }
+    }));
+  };
 
-  const handleDayToggle = (day: keyof FormData['days']) => {
+  const handleDayToggle = (day: keyof FormData["days"]) => {
     setFormData((prev) => ({
       ...prev,
       days: {
         ...prev.days,
         [day]: !prev.days[day],
       },
-    }))
-  }
+    }));
+  };
 
   // const addPeakHour = () => {
   //   if (formData.peakHours.some((hour) => hour.startTime === null && hour.endTime === null && hour.fee === "")) {
@@ -301,64 +322,78 @@ const supabase = createClient()
     setFormData((prev) => ({
       ...prev,
       peakHours: prev.peakHours.filter((hour) => hour.id !== id),
-    }))
-  }
+    }));
+  };
 
-  const handlePeakHourChange = (id: string, field: keyof PeakHour, value: dayjs.Dayjs | number | string |null) => {
-    const validateTimeValue = (value: dayjs.Dayjs | null, fieldType: string, peakId: string) => {
-      const platformStart = formData.startTime ? dayjs(formData.startTime) : null
-      const platformEnd = formData.endTime ? dayjs(formData.endTime) : null
+  const handlePeakHourChange = (
+    id: string,
+    field: keyof PeakHour,
+    value: dayjs.Dayjs | number | string | null
+  ) => {
+    const validateTimeValue = (
+      value: dayjs.Dayjs | null,
+      fieldType: string,
+      peakId: string
+    ) => {
+      const platformStart = formData.startTime
+        ? dayjs(formData.startTime)
+        : null;
+      const platformEnd = formData.endTime ? dayjs(formData.endTime) : null;
 
       if (platformStart && platformEnd && value) {
         if (value.isBefore(platformStart) || value.isAfter(platformEnd)) {
           notify(
-            `Peak hours must be within platform timing (${platformStart.format("h:mm a")} - ${platformEnd.format("h:mm a")})`,
-            false,
-          )
-          return false
+            `Peak hours must be within platform timing (${platformStart.format(
+              "h:mm a"
+            )} - ${platformEnd.format("h:mm a")})`,
+            false
+          );
+          return false;
         }
       }
 
       if (fieldType === "endTime") {
-        const peakHour = formData.peakHours.find((hour) => hour.id === peakId)
+        const peakHour = formData.peakHours.find((hour) => hour.id === peakId);
         if (peakHour?.startTime && value) {
-          const startTime = dayjs(peakHour.startTime)
+          const startTime = dayjs(peakHour.startTime);
           if (value.isBefore(startTime)) {
-            notify("End time cannot be before start time", false)
-            return false
+            notify("End time cannot be before start time", false);
+            return false;
           }
         }
       }
 
-      return true
-    }
+      return true;
+    };
 
     if (field === "startTime" || field === "endTime") {
       if (!validateTimeValue(value ? dayjs(value) : null, field, id)) {
-        return
+        return;
       }
     }
 
     setFormData((prev) => {
-      const updatedPeakHours = prev.peakHours.map((hour) => (hour.id === id ? { ...hour, [field]: value } : hour))
+      const updatedPeakHours = prev.peakHours.map((hour) =>
+        hour.id === id ? { ...hour, [field]: value } : hour
+      );
       return {
         ...prev,
         peakHours: updatedPeakHours,
-      }
-    })
-  }
+      };
+    });
+  };
 
   const handleEndTimeChange = (time: dayjs.Dayjs | null) => {
     if (formData.startTime && time) {
-      const startTime = dayjs(formData.startTime)
+      const startTime = dayjs(formData.startTime);
 
       if (time.isBefore(startTime)) {
-        notify("End time cannot be before start time", false)
-        return
+        notify("End time cannot be before start time", false);
+        return;
       }
     }
-    handleInputChange("endTime", time)
-  }
+    handleInputChange("endTime", time);
+  };
 
   const handleSave = async () => {
     try {
@@ -366,51 +401,64 @@ const supabase = createClient()
         .from("companies")
         .select("sports_management")
         .eq("store_admin", currentUser?.email)
-        .single()
+        .single();
 
-      if (fetchError) throw fetchError
+      if (fetchError) throw fetchError;
 
-      const currentSportsData = data?.sports_management || []
+      const currentSportsData = data?.sports_management || [];
 
-      const platformCount = Number.parseInt(formData.platformCount) || 0
-      const platformNameBase = formData.platformName.trim()
+      const platformCount = Number.parseInt(formData.platformCount) || 0;
+      const platformNameBase = formData.platformName.trim();
 
-      const lastChar = platformNameBase.slice(-1)
-      const useLetters = isNaN(Number(lastChar))
+      const lastChar = platformNameBase.slice(-1);
+      const useLetters = isNaN(Number(lastChar));
 
-      const courtNames = []
+      const courtNames = [];
       for (let i = 0; i < platformCount; i++) {
         if (useLetters) {
-          const baseWithoutLastChar = isNaN(Number(lastChar)) ? platformNameBase.slice(0, -1) : platformNameBase
-          const letter = String.fromCharCode(65 + i)
-          courtNames.push(`${baseWithoutLastChar}${letter}`)
+          const baseWithoutLastChar = isNaN(Number(lastChar))
+            ? platformNameBase.slice(0, -1)
+            : platformNameBase;
+          const letter = String.fromCharCode(65 + i);
+          courtNames.push(`${baseWithoutLastChar}${letter}`);
         } else {
-          const baseWithoutLastNumber = !isNaN(Number(lastChar)) ? platformNameBase.slice(0, -1) : platformNameBase
-          courtNames.push(`${baseWithoutLastNumber}${i + 1}`)
+          const baseWithoutLastNumber = !isNaN(Number(lastChar))
+            ? platformNameBase.slice(0, -1)
+            : platformNameBase;
+          courtNames.push(`${baseWithoutLastNumber}${i + 1}`);
         }
       }
 
-      const courtsData: CourtsData = {}
+      const courtsData: CourtsData = {};
 
       courtNames.forEach((courtName) => {
         courtsData[courtName] = {
           peakHours: formData.peakHours.map((peak) => ({
-            start: peak.startTime ? dayjs(peak.startTime).format("h:mm a") : null,
+            start: peak.startTime
+              ? dayjs(peak.startTime).format("h:mm a")
+              : null,
             end: peak.endTime ? dayjs(peak.endTime).format("h:mm a") : null,
             fee: Number.parseFloat(peak.fee) || 0,
           })),
           nonPeakHours: {
-            start: formData.nonPeakStartTime ? dayjs(formData.nonPeakStartTime).format("h:mm a") : null,
-            end: formData.nonPeakEndTime ? dayjs(formData.nonPeakEndTime).format("h:mm a") : null,
+            start: formData.nonPeakStartTime
+              ? dayjs(formData.nonPeakStartTime).format("h:mm a")
+              : null,
+            end: formData.nonPeakEndTime
+              ? dayjs(formData.nonPeakEndTime).format("h:mm a")
+              : null,
           },
           fees: {
             regular: Number.parseFloat(formData.regularFee) || 0,
           },
           availability: true,
-        }
-      })
+        };
+      });
 
-      const newId = currentSportsData.length > 0 ? Math.max(...currentSportsData.map((s: SportData) => s.id)) + 1 : 1
+      const newId =
+        currentSportsData.length > 0
+          ? Math.max(...currentSportsData.map((s: SportData) => s.id)) + 1
+          : 1;
 
       const newSport: SportData = {
         id: newId,
@@ -420,12 +468,20 @@ const supabase = createClient()
         availability: true,
         status: formData.sportStatus,
         timing: {
-          start: formData.startTime ? dayjs(formData.startTime).format("h:mm a") : null,
-          end: formData.endTime ? dayjs(formData.endTime).format("h:mm a") : null,
+          start: formData.startTime
+            ? dayjs(formData.startTime).format("h:mm a")
+            : null,
+          end: formData.endTime
+            ? dayjs(formData.endTime).format("h:mm a")
+            : null,
         },
         nonPeakHours: {
-          start: formData.nonPeakStartTime ? dayjs(formData.nonPeakStartTime).format("h:mm a") : null,
-          end: formData.nonPeakEndTime ? dayjs(formData.nonPeakEndTime).format("h:mm a") : null,
+          start: formData.nonPeakStartTime
+            ? dayjs(formData.nonPeakStartTime).format("h:mm a")
+            : null,
+          end: formData.nonPeakEndTime
+            ? dayjs(formData.nonPeakEndTime).format("h:mm a")
+            : null,
         },
         peakHours: formData.peakHours.map((peak) => ({
           start: peak.startTime ? dayjs(peak.startTime).format("h:mm a") : null,
@@ -438,18 +494,18 @@ const supabase = createClient()
           regular: Number.parseFloat(formData.regularFee) || 0,
         },
         courtsData: courtsData,
-      }
+      };
 
-      const updatedSportsData = [...currentSportsData, newSport]
+      const updatedSportsData = [...currentSportsData, newSport];
 
       const { error } = await supabase
         .from("companies")
         .update({
           sports_management: updatedSportsData,
         })
-        .eq("store_admin", currentUser?.email)
+        .eq("store_admin", currentUser?.email);
 
-      if (error) throw error
+      if (error) throw error;
 
       setFormData({
         sport_name: "",
@@ -461,7 +517,9 @@ const supabase = createClient()
         endTime: null,
         nonPeakStartTime: null,
         nonPeakEndTime: null,
-        peakHours: [{ id: crypto.randomUUID(), startTime: null, endTime: null, fee: "" }],
+        peakHours: [
+          { id: crypto.randomUUID(), startTime: null, endTime: null, fee: "" },
+        ],
         regularFee: "",
         days: {
           Mon: false,
@@ -472,15 +530,15 @@ const supabase = createClient()
           Sat: false,
           Sun: false,
         },
-      })
+      });
 
-      notify("Sport added successfully", true)
-      setOpenAdd(false)
-      fetchSportsData()
+      notify("Sport added successfully", true);
+      setOpenAdd(false);
+      fetchSportsData();
     } catch (error) {
-      console.error("Error saving sport data:", error)
+      console.error("Error saving sport data:", error);
     }
-  }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -493,7 +551,9 @@ const supabase = createClient()
       endTime: null,
       nonPeakStartTime: null,
       nonPeakEndTime: null,
-      peakHours: [{ id: crypto.randomUUID(), startTime: null, endTime: null, fee: "" }],
+      peakHours: [
+        { id: crypto.randomUUID(), startTime: null, endTime: null, fee: "" },
+      ],
       regularFee: "",
       days: {
         Mon: false,
@@ -504,13 +564,13 @@ const supabase = createClient()
         Sat: false,
         Sun: false,
       },
-    })
-  }
+    });
+  };
 
   const handleEdit = (id: number) => {
-    setEditLoaderId(id)
-    router.push(`/sports-management/edit/${id}`)
-  }
+    setEditLoaderId(id);
+    router.push(`/sports-management/edit/${id}`);
+  };
 
   const handleDelete = async (id: number) => {
     try {
@@ -518,60 +578,71 @@ const supabase = createClient()
         .from("companies")
         .select("sports_management")
         .eq("store_admin", currentUser?.email)
-        .single()
+        .single();
 
-      if (fetchError) throw fetchError
+      if (fetchError) throw fetchError;
 
       if (!data || !data.sports_management) {
-        console.error("No sports management data found")
-        return
+        console.error("No sports management data found");
+        return;
       }
 
-      const updatedSportsData = data.sports_management.filter((sport: SportData) => sport.id !== id)
+      const updatedSportsData = data.sports_management.filter(
+        (sport: SportData) => sport.id !== id
+      );
 
       const { error } = await supabase
         .from("companies")
         .update({
           sports_management: updatedSportsData,
         })
-        .eq("store_admin", currentUser?.email)
-      notify("Sport deleted successfully", true)
-      if (error) throw error
+        .eq("store_admin", currentUser?.email);
+      notify("Sport deleted successfully", true);
+      if (error) throw error;
 
-      fetchSportsData()
+      fetchSportsData();
     } catch (error) {
-      console.error("Error deleting sport:", error)
+      console.error("Error deleting sport:", error);
     }
-  }
+  };
 
   const getRowStyle = (availability: boolean) => {
-    return availability ? {} : { color: "#9ca3af" }
-  }
+    return availability ? {} : { color: "#9ca3af" };
+  };
 
   const getAvailablePlatforms = (sport: SportData) => {
-    if (!sport.availability) return 0
+    if (!sport.availability) return 0;
 
     if (sport.courtsData) {
       return Object.values(sport.courtsData).filter(
-        (court) => court.availability,
-      ).length
+        (court) => court.availability
+      ).length;
     }
 
-    return sport.available_court_count || sport.platform_count
-  }
+    return sport.available_court_count || sport.platform_count;
+  };
 
   const getUnavailablePlatforms = (sport: SportData) => {
-    if (!sport.availability) return sport.platform_count
+    if (!sport.availability) return sport.platform_count;
 
     if (sport.courtsData) {
       const availableCount = Object.values(sport.courtsData).filter(
-        (court) => court.availability,
-      ).length
-      return sport.courts.length - availableCount
+        (court) => court.availability
+      ).length;
+      return sport.courts.length - availableCount;
     }
 
-    return sport.platform_count - (sport.available_court_count || sport.platform_count)
-  }
+    return (
+      sport.platform_count -
+      (sport.available_court_count || sport.platform_count)
+    );
+  };
+  const filterSports = (sports: SportData[], searchTerm: string) => {
+    if (!searchTerm.trim()) return sports;
+    return sports.filter((sport) =>
+      sport.sport_name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
 
   return (
     <div className="w-full bg-white p-4">
@@ -583,8 +654,8 @@ const supabase = createClient()
         <Sheet
           open={openAdd}
           onOpenChange={(open) => {
-            setOpenAdd(open)
-            if (!open) resetForm()
+            setOpenAdd(open);
+            if (!open) resetForm();
           }}
         >
           <SheetTrigger>
@@ -593,18 +664,25 @@ const supabase = createClient()
               <span className="ml-2">Add Sport</span>
             </div>
           </SheetTrigger>
-          <SheetContent className="bg-white overflow-y-auto" style={{ maxWidth: "600px", height: "100vh" }}>
+          <SheetContent
+            className="bg-white overflow-y-auto"
+            style={{ maxWidth: "600px", height: "100vh" }}
+          >
             <SheetHeader className="">
-              <SheetTitle className="text-gray-600 text-sm -mt-1 uppercase">New Sport</SheetTitle>
+              <SheetTitle className="text-gray-600 text-sm -mt-1 uppercase">
+                New Sport
+              </SheetTitle>
             </SheetHeader>
             <SheetDescription>
               <div className="w-full space-y-4 pt-4 pb-20">
                 <div className="flex gap-4">
                   <div className="w-full space-y-2">
-                    <Label className="text-gray-900 text-sm font-medium">Sport Name</Label>
+                    <Label className="text-gray-900 text-sm font-medium">
+                      Sport Name
+                    </Label>
                     <Input
                       type="text"
-                      placeholder="Badminton / Tennis / Cricket..."
+                      placeholder="e.g. Badminton"
                       className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
                       value={formData.sport_name || ""}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -614,8 +692,15 @@ const supabase = createClient()
                   </div>
 
                   <div className="w-full space-y-2">
-                    <Label className="text-gray-900 text-sm font-medium">Icon</Label>
-                    <Select value={formData.icon} onValueChange={(value) => handleInputChange("icon", value)}>
+                    <Label className="text-gray-900 text-sm font-medium">
+                      Icon
+                    </Label>
+                    <Select
+                      value={formData.icon}
+                      onValueChange={(value) =>
+                        handleInputChange("icon", value)
+                      }
+                    >
                       <SelectTrigger className="w-full border border-zinc-300 bg-gray-50 text-sm text-gray-700">
                         <SelectValue placeholder="Choose icon" />
                       </SelectTrigger>
@@ -626,23 +711,33 @@ const supabase = createClient()
                           </div>
                         </SelectItem>
                         <SelectItem value="tennis">
-                          <div className="flex items-center gap-2">{getSportIcon("tennis")}</div>
+                          <div className="flex items-center gap-2">
+                            {getSportIcon("tennis")}
+                          </div>
                         </SelectItem>
                         <SelectItem value="cricket">
-                          <div className="flex items-center gap-2">{getSportIcon("cricket")}</div>
+                          <div className="flex items-center gap-2">
+                            {getSportIcon("cricket")}
+                          </div>
                         </SelectItem>
                         <SelectItem value="yoga">
-                          <div className="flex items-center gap-2">{getSportIcon("yoga")}</div>
+                          <div className="flex items-center gap-2">
+                            {getSportIcon("yoga")}
+                          </div>
                         </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="w-full space-y-2">
-                    <Label className="text-gray-900 text-sm font-medium">Sport Status</Label>
+                    <Label className="text-gray-900 text-sm font-medium">
+                      Sport Status
+                    </Label>
                     <Select
                       value={formData.sportStatus}
-                      onValueChange={(value) => handleInputChange("sportStatus", value)}
+                      onValueChange={(value) =>
+                        handleInputChange("sportStatus", value)
+                      }
                     >
                       <SelectTrigger className="w-full border border-zinc-300 bg-gray-50 text-sm text-gray-700">
                         <SelectValue placeholder="Active / Inactive" />
@@ -657,29 +752,39 @@ const supabase = createClient()
 
                 <div className="flex flex-row gap-4">
                   <div className="w-full space-y-2">
-                    <Label className="text-gray-900 text-sm font-medium">Platform Names </Label>
+                    <Label className="text-gray-900 text-sm font-medium">
+                      Platform Names{" "}
+                    </Label>
                     <input
                       type="text"
-                      placeholder="courtA,courtB,courtC"
+                      placeholder="e.g CourtA or Court1"
                       className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
                       value={formData.platformName}
-                      onChange={(e) => handleInputChange("platformName", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("platformName", e.target.value)
+                      }
                     />
                   </div>
                   <div className="w-full space-y-2">
-                    <Label className="text-gray-900 text-sm font-medium">No. of Platform</Label>
+                    <Label className="text-gray-900 text-sm font-medium">
+                      No. of Platform
+                    </Label>
                     <input
                       type="number"
-                      placeholder="2"
+                      placeholder="e.g 2"
                       className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
                       value={formData.platformCount}
-                      onChange={(e) => handleInputChange("platformCount", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("platformCount", e.target.value)
+                      }
                     />
                   </div>
                 </div>
 
                 <div className="w-full  space-y-2">
-                  <Label className="text-gray-900 text-sm font-medium">Platform Timing</Label>
+                  <Label className="text-gray-900 text-sm font-medium">
+                    Platform Timing
+                  </Label>
                   <div className="flex items-center gap-4">
                     <div className="w-full space-y-1.5">
                       <Label className="text-sm text-gray-600">From</Label>
@@ -688,68 +793,117 @@ const supabase = createClient()
                         use12Hours={timeFormat === "12 hours"}
                         format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm"}
                         className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                        onChange={(time) => handleInputChange("startTime", time)}
+                        onChange={(time) =>
+                          handleInputChange("startTime", time)
+                        }
+                        needConfirm={false}
                       />
                     </div>
 
                     <div className="w-full space-y-1.5">
-                      <Label className="text-gray-900 text-sm font-medium">To</Label>
+                      <Label className="text-gray-900 text-sm font-medium">
+                        To
+                      </Label>
                       <TimePicker
                         value={formData.endTime}
                         use12Hours={timeFormat === "12 hours"}
                         format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm "}
                         className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                         onChange={handleEndTimeChange}
+                        needConfirm={false}
                       />
                     </div>
-                  </div>
-                  <div className="w-full space-y-2">
-                    <Label className="text-gray-900 text-sm font-medium">Regular Fee</Label>
-                    <input
-                      type="number"
-                      placeholder="12.99"
-                      className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
-                      value={formData.regularFee}
-                      onChange={(e) => handleInputChange("regularFee", e.target.value)}
-                    />
+                    <div className="w-full space-y-2">
+                      <Label className="text-gray-900 text-sm font-medium">
+                        Regular Fee
+                      </Label>
+                      <div className="relative">
+                        {formData.regularFee !== "" && (
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+                            $
+                          </span>
+                        )}
+                        <input
+                          type="number"
+                          placeholder="e.g $10"
+                          className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700 pl-6"
+                          value={formData.regularFee}
+                          onChange={(e) =>
+                            handleInputChange("regularFee", e.target.value)
+                          }
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 <div className="w-full space-y-2">
-                  <Label className="text-gray-900 text-sm font-medium">Peak Hours</Label>
+                  <Label className="text-gray-900 text-sm font-medium">
+                    Peak Hours
+                  </Label>
                   {formData.peakHours.map((peakHour) => (
-                    <div key={peakHour.id} className="flex items-center gap-4 mb-2">
+                    <div
+                      key={peakHour.id}
+                      className="flex items-center gap-4 mb-2"
+                    >
                       <div className="w-full space-y-1.5">
                         <Label className="text-sm text-gray-600">From</Label>
                         <TimePicker
                           value={peakHour.startTime}
                           use12Hours={timeFormat === "12 hours"}
-                          format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm"}
+                          format={
+                            timeFormat === "12 hours" ? "h:mm a" : "HH:mm"
+                          }
                           className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                          onChange={(time) => handlePeakHourChange(peakHour.id, "startTime", time)}
+                          onChange={(time) =>
+                            handlePeakHourChange(peakHour.id, "startTime", time)
+                          }
+                          needConfirm={false}
                         />
                       </div>
 
                       <div className="w-full space-y-1.5">
-                        <Label className="text-gray-900 text-sm font-medium">To</Label>
+                        <Label className="text-gray-900 text-sm font-medium">
+                          To
+                        </Label>
                         <TimePicker
                           value={peakHour.endTime}
                           use12Hours={timeFormat === "12 hours"}
-                          format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm "}
+                          format={
+                            timeFormat === "12 hours" ? "h:mm a" : "HH:mm "
+                          }
                           className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                          onChange={(time) => handlePeakHourChange(peakHour.id, "endTime", time)}
+                          onChange={(time) =>
+                            handlePeakHourChange(peakHour.id, "endTime", time)
+                          }
+                          needConfirm={false}
                         />
                       </div>
 
                       <div className="w-full space-y-1.5">
-                        <Label className="text-gray-900 text-sm font-medium">Fee</Label>
-                        <input
-                          type="number"
-                          placeholder="15.99"
-                          className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
-                          value={peakHour.fee}
-                          onChange={(e) => handlePeakHourChange(peakHour.id, "fee", e.target.value)}
-                        />
+                        <Label className="text-gray-900 text-sm font-medium">
+                          Fee
+                        </Label>
+                        <div className="relative">
+                          {peakHour.fee !== "" && (
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+                              $
+                            </span>
+                          )}
+                          <input
+                            type="number"
+                            placeholder="e.g $15"
+                            className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 pl-6 text-sm text-gray-700"
+                            value={peakHour.fee}
+                            onChange={(e) =>
+                              handlePeakHourChange(
+                                peakHour.id,
+                                "fee",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </div>
                       </div>
 
                       {formData.peakHours.length > 1 && (
@@ -766,15 +920,24 @@ const supabase = createClient()
                 </div>
 
                 <div>
-                  <Label className="text-gray-900 text-sm font-medium">Active Days</Label>
+                  <Label className="text-gray-900 text-sm font-medium">
+                    Active Days
+                  </Label>
                   <div className="flex gap-4 flex-wrap pt-2">
                     {Object.keys(formData.days).map((day) => (
-                      <label key={day} className="flex items-center gap-1 text-sm text-gray-700">
+                      <label
+                        key={day}
+                        className="flex items-center gap-1 text-sm text-gray-700"
+                      >
                         <input
                           type="checkbox"
                           className="accent-teal-800"
-                          checked={formData.days[day as keyof typeof formData.days]}
-                          onChange={() => handleDayToggle(day as keyof typeof formData.days)}
+                          checked={
+                            formData.days[day as keyof typeof formData.days]
+                          }
+                          onChange={() =>
+                            handleDayToggle(day as keyof typeof formData.days)
+                          }
                         />
                         {day}
                       </label>
@@ -783,9 +946,11 @@ const supabase = createClient()
                       <input
                         type="checkbox"
                         className="accent-teal-800"
-                        checked={Object.values(formData.days).every((day) => day)}
+                        checked={Object.values(formData.days).every(
+                          (day) => day
+                        )}
                         onChange={(e) => {
-                          const isChecked = e.target.checked
+                          const isChecked = e.target.checked;
                           setFormData((prev) => ({
                             ...prev,
                             days: {
@@ -797,7 +962,7 @@ const supabase = createClient()
                               Sat: isChecked,
                               Sun: isChecked,
                             },
-                          }))
+                          }));
                         }}
                       />
                       <span>All</span>
@@ -805,18 +970,18 @@ const supabase = createClient()
                   </div>
                 </div>
 
-                <div className="flex justify-start gap-2 bg-white w-full">
+                <div className="flex justify-start gap-2 bg-white w-full mt-20">
                   <button
-                    className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2"
+                    className="bg-teal-800 hover:bg-teal-700 w-[110px] text-white rounded-[12px] px-4 h-10 pr-5 text-xs flex justify-center items-center mt-2"
                     onClick={handleSave}
                   >
                     Save
                   </button>
                   <div
-                    className="border border-border_color rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2 cursor-pointer"
+                    className="border border-border_color rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2 cursor-pointer hover:bg-gray-50"
                     onClick={() => {
-                      resetForm()
-                      setOpenAdd(false)
+                      resetForm();
+                      setOpenAdd(false);
                     }}
                   >
                     Cancel
@@ -827,14 +992,35 @@ const supabase = createClient()
           </SheetContent>
         </Sheet>
       </div>
+      <div className="w-[300px] px-3 pt-3">
+        <input
+          type="text"
+          placeholder="Search..."
+          className="border border-gray-300 rounded-md px-3 py-2 w-full text-sm"
+          onChange={(e) => {
+            setSearchSports(e.target.value);
+          }}
+          value={searchSports}
+        />
+        <Search
+          className="relative left-[250px] bottom-7 z-10 text-gray-500"
+          size={16}
+        />
+      </div>
 
-      <div className="w-full border border-zinc-200 rounded-[8px] bg-white text-sm my-6">
-        <Table data={sportData} autoHeight className="rounded-[8px]">
+      <div className="w-full border border-zinc-200 rounded-[8px] bg-white text-sm my-2">
+        <Table
+          data={filterSports(sportData, searchSports)}
+          autoHeight
+          className="rounded-[8px]"
+        >
           <Column width={70} align="center">
             <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>S.NO</HeaderCell>
             <Cell>
               {(rowData: RowDataType<SportData>) => (
-                <div style={getRowStyle(rowData.availability)}>{rowData.id}</div>
+                <div style={getRowStyle(rowData.availability)}>
+                  {rowData.id}
+                </div>
               )}
             </Cell>
           </Column>
@@ -843,7 +1029,10 @@ const supabase = createClient()
             <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>ICON</HeaderCell>
             <Cell>
               {(rowData: RowDataType<SportData>) => (
-                <div className="flex justify-center" style={getRowStyle(rowData.availability)}>
+                <div
+                  className="flex justify-center"
+                  style={getRowStyle(rowData.availability)}
+                >
                   {getSportIcon(rowData.icon)}
                 </div>
               )}
@@ -851,25 +1040,36 @@ const supabase = createClient()
           </Column>
 
           <Column width={200} align="center">
-            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>SPORT NAME</HeaderCell>
+            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
+              SPORT NAME
+            </HeaderCell>
             <Cell>
               {(rowData: RowDataType<SportData>) => (
-                <div style={getRowStyle(rowData.availability)}>{rowData.sport_name}</div>
+                <div style={getRowStyle(rowData.availability)}>
+                  {rowData.sport_name}
+                </div>
               )}
             </Cell>
           </Column>
 
           <Column flexGrow={120}>
-            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>No. OF PLATFORM</HeaderCell>
+            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
+              No. OF PLATFORM
+            </HeaderCell>
             <Cell>
               {(rowData: RowDataType<SportData>) => (
-                <div style={getRowStyle(rowData.availability)}>{rowData.platform_count}</div>
+                <div style={getRowStyle(rowData.availability)}>
+                  {rowData.platform_count}
+                </div>
               )}
             </Cell>
           </Column>
 
           <Column flexGrow={120}>
-            <HeaderCell className="uppercase" style={{ backgroundColor: "#f2f2f2" }}>
+            <HeaderCell
+              className="uppercase"
+              style={{ backgroundColor: "#f2f2f2" }}
+            >
               Available Platform
             </HeaderCell>
             <Cell>
@@ -882,7 +1082,10 @@ const supabase = createClient()
           </Column>
 
           <Column flexGrow={120}>
-            <HeaderCell className="uppercase" style={{ backgroundColor: "#f2f2f2" }}>
+            <HeaderCell
+              className="uppercase"
+              style={{ backgroundColor: "#f2f2f2" }}
+            >
               UnAvailable Platform
             </HeaderCell>
             <Cell>
@@ -895,7 +1098,9 @@ const supabase = createClient()
           </Column>
 
           <Column width={120} align="center">
-            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>AVAILABILITY</HeaderCell>
+            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
+              AVAILABILITY
+            </HeaderCell>
             <Cell>
               {(rowData: RowDataType<SportData>) => (
                 <div className="flex justify-center">
@@ -910,7 +1115,9 @@ const supabase = createClient()
           </Column>
 
           <Column width={100} align="center">
-            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>ACTION</HeaderCell>
+            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
+              ACTION
+            </HeaderCell>
             <Cell>
               {(rowData: RowDataType<SportData>) => (
                 <div className="flex justify-evenly align-middle items-center h-full text-gray-600 gap-3">
@@ -948,7 +1155,7 @@ const supabase = createClient()
                   <AlertDialog
                     open={sportIdToDelete === rowData.id}
                     onOpenChange={(open) => {
-                      if (!open) setSportIdToDelete(null)
+                      if (!open) setSportIdToDelete(null);
                     }}
                   >
                     <AlertDialogTrigger asChild>
@@ -960,9 +1167,12 @@ const supabase = createClient()
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure you want to delete this sport?</AlertDialogTitle>
+                        <AlertDialogTitle>
+                          Are you sure you want to delete this sport?
+                        </AlertDialogTitle>
                         <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete the sport and all its data.
+                          This action cannot be undone. This will permanently
+                          delete the sport and all its data.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -983,5 +1193,5 @@ const supabase = createClient()
         </Table>
       </div>
     </div>
-  )
+  );
 }
