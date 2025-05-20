@@ -150,7 +150,7 @@ console.log("working");
             </div>
             <SubmitButton
               formAction={async () => {}}
-              className="bg-blue-700 text-[white] text-sm px-4 py-2 border border-primary-700 rounded mb-2 hover:bg-primary-600 fade"
+              className="bg-teal-800 text-[white] text-sm px-4 py-2 border border-primary-700 rounded mb-2 hover:bg-primary-600 fade"
               pendingText={"Logging In..."}
             >
               {loading ? "Logging In..." : "Log In"}

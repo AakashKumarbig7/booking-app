@@ -84,13 +84,14 @@ export default function SignUp() {
 
 <div className="absolute top-0 left-0 p-4">
       <Link href="/dashboard">
-        <Image
+        {/* <Image
               src = {logoUrl || '/images/logo.png'}
               width={106}
               height={40}
               alt="logo"
               className="rounded  py-[1px] bg-white"
-            />        </Link>
+            />         */}
+            </Link>
       </div>
 
       <div className="w-1/2 flex items-center justify-center p-6">
@@ -175,7 +176,7 @@ export default function SignUp() {
             </ul>}
           <SubmitButton
             type="submit"
-            className="bg-[#1A80F4] text-[white] text-sm px-4 py-2 border border-[#1A80F4] rounded mb-2 hover:bg-[#32A0FF]"
+            className="bg-teal-800 text-[white] text-sm px-4 py-2 border border-[#1A80F4] rounded mb-2 hover:bg-[#32A0FF]"
             pendingText={isLoading ? "Signing Up..." : "Sign Up"} // Show pending text
           >
             {isLoading ? "Signing Up..." : "Sign Up"}
