@@ -24,6 +24,7 @@ import { useGlobalContext } from "@/context/store";
 import DatePickerComponent from "./datePicker";
 import { format } from "date-fns";
 import dayjs from "dayjs";
+import toast, { Toaster } from "react-hot-toast";
 
 interface Holiday {
   id: string;
@@ -38,6 +39,16 @@ interface HolidayFormData {
   startDate: string | null;
   endDate: string | null;
 }
+const notify = (message: string, success: boolean) =>
+  toast[success ? "success" : "error"](message, {
+    style: {
+      borderRadius: "10px",
+      background: "#fff",
+      color: "#000",
+    },
+    position: "top-right",
+    duration: 3000,
+  });
 
 const Holidays = () => {
   const supabase = createClient();
@@ -119,6 +130,7 @@ const Holidays = () => {
       setDeleteOpen(false);
       setOpenAdd(false);
       setEditData(null);
+      notify("Holiday added successfully", true);
     }
   }
 
@@ -145,6 +157,7 @@ const Holidays = () => {
     setOpenEdit(false);
     setDeleteOpen(false);
     setOpenAdd(false);
+    notify("Holiday updated successfully", true);
   };
 
   const handleDelete = async () => {
@@ -156,10 +169,12 @@ const Holidays = () => {
       .update({ holidays: filteredData })
       .eq("store_admin", currentUser?.email)
       .single();
-
+      
+  
     setData(filteredData);
     setDeleteOpen(false);
     setSelectedId(null);
+     notify("Holiday deleted successfully", true);
   };
 
   const getData = () => {
@@ -197,7 +212,10 @@ const Holidays = () => {
   };
 
   return (
+    <>
+   
     <div className="">
+     
       <Sheet open={openAdd} onOpenChange={setOpenAdd}>
         <div className="flex justify-end mb-4">
           <SheetTrigger>
@@ -471,14 +489,15 @@ const Holidays = () => {
                       </DialogHeader>
                       <div className="flex justify-start gap-3">
                         <Button
-                          className="bg-red-600 text-white hover:bg-red-400 hover:text-white w-1/2"
+                        variant={"outline"}
+                          className="  hover:bg-gray-50   w-1/2"
                           onClick={() => setDeleteOpen(false)}
                         >
                           Cancel
                         </Button>
                         <Button
                           onClick={handleDelete}
-                          className="flex items-center hover:text-white hover:bg-teal-700 bg-teal-700 text-white w-1/2"
+                          className="flex items-center hover:text-white hover:bg-red-800  bg-red-700 text-white w-1/2"
                         >
                           <span className="ml-1">Delete</span>
                         </Button>
@@ -492,6 +511,7 @@ const Holidays = () => {
         </Table>
       </div>
     </div>
+    </>
   );
 };
 

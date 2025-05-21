@@ -870,7 +870,7 @@ export default function EditSportPage({
               autoHeight={false}
               className="rounded-[8px]"
               rowHeight={170}
-              height={600}
+              height={900}
               rowClassName={(rowData: RowDataType) => (!rowData?.availability ? "grayed-out-row" : "")}
             >
               <Column width={70} align="center" fixed>

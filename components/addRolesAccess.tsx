@@ -432,7 +432,7 @@ const AccessLevel = () => {
                   Save Access Level
                 </button>
                 <button
-                  className="border border-border_color rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2"
+                  className="border border-border_color hover:bg-gray-100 rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2"
                   onClick={() => {
                     setOpenAdd(false);
                     setPermissionLists(allPermission);
@@ -615,7 +615,7 @@ const AccessLevel = () => {
                     Update Access Level
                   </button>
                   <div
-                    className="border border-border_color rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2 cursor-pointer"
+                    className="border border-border_color hover:bg-gray-100 rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2 cursor-pointer"
                     onClick={() => setOpenEdit(false)}
                   >
                     Cancel

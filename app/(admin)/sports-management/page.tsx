@@ -29,7 +29,7 @@ import { useGlobalContext } from "@/context/store";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import BadmintonIcon, { getSportIcon } from "@/components/sport-icons";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -396,6 +396,35 @@ export default function SportsManagementPage() {
   };
 
   const handleSave = async () => {
+    // Validate mandatory fields
+    if (!formData.sport_name.trim()) {
+      notify("Sport name is required", false);
+      return;
+    }
+
+    if (!formData.icon) {
+      notify("Sport icon is required", false);
+      return;
+    }
+
+    if (!formData.sportStatus) {
+      notify("Sport status is required", false);
+      return;
+    }
+
+    if (!formData.platformName.trim()) {
+      notify("Platform name is required", false);
+      return;
+    }
+
+    if (
+      !formData.platformCount ||
+      Number.parseInt(formData.platformCount) <= 0
+    ) {
+      notify("Valid platform count is required", false);
+      return;
+    }
+
     try {
       const { data, error: fetchError } = await supabase
         .from("companies")
@@ -532,9 +561,9 @@ export default function SportsManagementPage() {
         },
       });
 
-      notify("Sport added successfully", true);
       setOpenAdd(false);
       fetchSportsData();
+      notify("Sport added successfully", true);
     } catch (error) {
       console.error("Error saving sport data:", error);
     }
@@ -597,10 +626,11 @@ export default function SportsManagementPage() {
           sports_management: updatedSportsData,
         })
         .eq("store_admin", currentUser?.email);
-      notify("Sport deleted successfully", true);
+
       if (error) throw error;
 
       fetchSportsData();
+      notify("Sport deleted successfully", true);
     } catch (error) {
       console.error("Error deleting sport:", error);
     }
@@ -645,218 +675,164 @@ export default function SportsManagementPage() {
   };
 
   return (
-    <div className="w-full bg-white p-4">
-      <div className="px-4 py-2 flex items-center justify-between">
-        <div className="items-center gap-2">
-          <h1 className="text-xl font-bold text-zinc-950">Sport Management</h1>
-          <p className="text-sm text-zinc-500">Add & manage sports details.</p>
-        </div>
-        <Sheet
-          open={openAdd}
-          onOpenChange={(open) => {
-            setOpenAdd(open);
-            if (!open) resetForm();
-          }}
-        >
-          <SheetTrigger>
-            <div className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] w-[130px] h-[40px] flex items-center justify-center text-xs cursor-pointer">
-              <FilePlus size={14} />
-              <span className="ml-2">Add Sport</span>
-            </div>
-          </SheetTrigger>
-          <SheetContent
-            className="bg-white overflow-y-auto"
-            style={{ maxWidth: "600px", height: "100vh" }}
+    <>
+      <div className="w-full bg-white p-4">
+        <Toaster />
+        <div className="px-4 py-2 flex items-center justify-between">
+          <div className="items-center gap-2">
+            <h1 className="text-xl font-bold text-zinc-950">
+              Sport Management
+            </h1>
+            <p className="text-sm text-zinc-500">
+              Add & manage sports details.
+            </p>
+          </div>
+          <Sheet
+            open={openAdd}
+            onOpenChange={(open) => {
+              setOpenAdd(open);
+              if (!open) resetForm();
+            }}
           >
-            <SheetHeader className="">
-              <SheetTitle className="text-gray-600 text-sm -mt-1 uppercase">
-                New Sport
-              </SheetTitle>
-            </SheetHeader>
-            <SheetDescription>
-              <div className="w-full space-y-4 pt-4 pb-20">
-                <div className="flex gap-4">
-                  <div className="w-full space-y-2">
-                    <Label className="text-gray-900 text-sm font-medium">
-                      Sport Name
-                    </Label>
-                    <Input
-                      type="text"
-                      placeholder="e.g. Badminton"
-                      className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
-                      value={formData.sport_name || ""}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        handleInputChange("sport_name", e.target.value)
-                      }
-                    />
-                  </div>
-
-                  <div className="w-full space-y-2">
-                    <Label className="text-gray-900 text-sm font-medium">
-                      Icon
-                    </Label>
-                    <Select
-                      value={formData.icon}
-                      onValueChange={(value) =>
-                        handleInputChange("icon", value)
-                      }
-                    >
-                      <SelectTrigger className="w-full border border-zinc-300 bg-gray-50 text-sm text-gray-700">
-                        <SelectValue placeholder="Choose icon" />
-                      </SelectTrigger>
-                      <SelectContent className="align-middle">
-                        <SelectItem value="badminton">
-                          <div className="flex items-center gap-2">
-                            <BadmintonIcon />
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="tennis">
-                          <div className="flex items-center gap-2">
-                            {getSportIcon("tennis")}
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="cricket">
-                          <div className="flex items-center gap-2">
-                            {getSportIcon("cricket")}
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="yoga">
-                          <div className="flex items-center gap-2">
-                            {getSportIcon("yoga")}
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="w-full space-y-2">
-                    <Label className="text-gray-900 text-sm font-medium">
-                      Sport Status
-                    </Label>
-                    <Select
-                      value={formData.sportStatus}
-                      onValueChange={(value) =>
-                        handleInputChange("sportStatus", value)
-                      }
-                    >
-                      <SelectTrigger className="w-full border border-zinc-300 bg-gray-50 text-sm text-gray-700">
-                        <SelectValue placeholder="Active / Inactive" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex flex-row gap-4">
-                  <div className="w-full space-y-2">
-                    <Label className="text-gray-900 text-sm font-medium">
-                      Platform Names{" "}
-                    </Label>
-                    <input
-                      type="text"
-                      placeholder="e.g CourtA or Court1"
-                      className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
-                      value={formData.platformName}
-                      onChange={(e) =>
-                        handleInputChange("platformName", e.target.value)
-                      }
-                    />
-                  </div>
-                  <div className="w-full space-y-2">
-                    <Label className="text-gray-900 text-sm font-medium">
-                      No. of Platform
-                    </Label>
-                    <input
-                      type="number"
-                      placeholder="e.g 2"
-                      className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
-                      value={formData.platformCount}
-                      onChange={(e) =>
-                        handleInputChange("platformCount", e.target.value)
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="w-full  space-y-2">
-                  <Label className="text-gray-900 text-sm font-medium">
-                    Platform Timing
-                  </Label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-full space-y-1.5">
-                      <Label className="text-sm text-gray-600">From</Label>
-                      <TimePicker
-                        value={formData.startTime}
-                        use12Hours={timeFormat === "12 hours"}
-                        format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm"}
-                        className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                        onChange={(time) =>
-                          handleInputChange("startTime", time)
+            <SheetTrigger>
+              <div className="bg-teal-800 hover:bg-teal-700 text-white rounded-[12px] w-[130px] h-[40px] flex items-center justify-center text-xs cursor-pointer">
+                <FilePlus size={14} />
+                <span className="ml-2">Add Sport</span>
+              </div>
+            </SheetTrigger>
+            <SheetContent
+              className="bg-white overflow-y-auto"
+              style={{ maxWidth: "600px", height: "100vh" }}
+            >
+              <SheetHeader className="">
+                <SheetTitle className="text-gray-600 text-sm -mt-1 uppercase">
+                  New Sport
+                </SheetTitle>
+              </SheetHeader>
+              <SheetDescription>
+                <div className="w-full space-y-4 pt-4 pb-20">
+                  <div className="flex gap-4">
+                    <div className="w-full space-y-2">
+                      <Label className="text-gray-900 text-sm font-medium">
+                        Sport Name
+                      </Label>
+                      <Input
+                        type="text"
+                        placeholder="e.g. Badminton"
+                        className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
+                        value={formData.sport_name || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          handleInputChange("sport_name", e.target.value)
                         }
-                        needConfirm={false}
                       />
                     </div>
 
-                    <div className="w-full space-y-1.5">
+                    <div className="w-full space-y-2">
                       <Label className="text-gray-900 text-sm font-medium">
-                        To
+                        Icon
                       </Label>
-                      <TimePicker
-                        value={formData.endTime}
-                        use12Hours={timeFormat === "12 hours"}
-                        format={timeFormat === "12 hours" ? "h:mm a" : "HH:mm "}
-                        className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                        onChange={handleEndTimeChange}
-                        needConfirm={false}
+                      <Select
+                        value={formData.icon}
+                        onValueChange={(value) =>
+                          handleInputChange("icon", value)
+                        }
+                      >
+                        <SelectTrigger className="w-full border border-zinc-300 bg-gray-50 text-sm text-gray-700">
+                          <SelectValue placeholder="Choose icon" />
+                        </SelectTrigger>
+                        <SelectContent className="align-middle">
+                          <SelectItem value="badminton">
+                            <div className="flex items-center gap-2">
+                              <BadmintonIcon />
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="tennis">
+                            <div className="flex items-center gap-2">
+                              {getSportIcon("tennis")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="cricket">
+                            <div className="flex items-center gap-2">
+                              {getSportIcon("cricket")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="yoga">
+                            <div className="flex items-center gap-2">
+                              {getSportIcon("yoga")}
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="w-full space-y-2">
+                      <Label className="text-gray-900 text-sm font-medium">
+                        Sport Status
+                      </Label>
+                      <Select
+                        value={formData.sportStatus}
+                        onValueChange={(value) =>
+                          handleInputChange("sportStatus", value)
+                        }
+                      >
+                        <SelectTrigger className="w-full border border-zinc-300 bg-gray-50 text-sm text-gray-700">
+                          <SelectValue placeholder="Active / Inactive" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-row gap-4">
+                    <div className="w-full space-y-2">
+                      <Label className="text-gray-900 text-sm font-medium">
+                        Platform Names{" "}
+                      </Label>
+                      <input
+                        type="text"
+                        placeholder="e.g CourtA or Court1"
+                        className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
+                        value={formData.platformName}
+                        onChange={(e) =>
+                          handleInputChange("platformName", e.target.value)
+                        }
                       />
                     </div>
                     <div className="w-full space-y-2">
                       <Label className="text-gray-900 text-sm font-medium">
-                        Regular Fee
+                        No. of Platform
                       </Label>
-                      <div className="relative">
-                        {formData.regularFee !== "" && (
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
-                            $
-                          </span>
-                        )}
-                        <input
-                          type="number"
-                          placeholder="e.g $10"
-                          className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700 pl-6"
-                          value={formData.regularFee}
-                          onChange={(e) =>
-                            handleInputChange("regularFee", e.target.value)
-                          }
-                        />
-                      </div>
+                      <input
+                        type="number"
+                        placeholder="e.g 2"
+                        className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
+                        value={formData.platformCount}
+                        onChange={(e) =>
+                          handleInputChange("platformCount", e.target.value)
+                        }
+                      />
                     </div>
                   </div>
-                </div>
 
-                <div className="w-full space-y-2">
-                  <Label className="text-gray-900 text-sm font-medium">
-                    Peak Hours
-                  </Label>
-                  {formData.peakHours.map((peakHour) => (
-                    <div
-                      key={peakHour.id}
-                      className="flex items-center gap-4 mb-2"
-                    >
+                  <div className="w-full  space-y-2">
+                    <Label className="text-gray-900 text-sm font-medium">
+                      Platform Timing
+                    </Label>
+                    <div className="flex items-center gap-4">
                       <div className="w-full space-y-1.5">
                         <Label className="text-sm text-gray-600">From</Label>
                         <TimePicker
-                          value={peakHour.startTime}
+                          value={formData.startTime}
                           use12Hours={timeFormat === "12 hours"}
                           format={
                             timeFormat === "12 hours" ? "h:mm a" : "HH:mm"
                           }
                           className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
                           onChange={(time) =>
-                            handlePeakHourChange(peakHour.id, "startTime", time)
+                            handleInputChange("startTime", time)
                           }
                           needConfirm={false}
                         />
@@ -867,331 +843,406 @@ export default function SportsManagementPage() {
                           To
                         </Label>
                         <TimePicker
-                          value={peakHour.endTime}
+                          value={formData.endTime}
                           use12Hours={timeFormat === "12 hours"}
                           format={
                             timeFormat === "12 hours" ? "h:mm a" : "HH:mm "
                           }
                           className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
-                          onChange={(time) =>
-                            handlePeakHourChange(peakHour.id, "endTime", time)
-                          }
+                          onChange={handleEndTimeChange}
                           needConfirm={false}
                         />
                       </div>
-
-                      <div className="w-full space-y-1.5">
+                      <div className="w-full space-y-2">
                         <Label className="text-gray-900 text-sm font-medium">
-                          Fee
+                          Regular Fee
                         </Label>
                         <div className="relative">
-                          {peakHour.fee !== "" && (
+                          {formData.regularFee !== "" && (
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
                               $
                             </span>
                           )}
                           <input
                             type="number"
-                            placeholder="e.g $15"
-                            className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 pl-6 text-sm text-gray-700"
-                            value={peakHour.fee}
+                            placeholder="e.g $10"
+                            className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700 pl-6"
+                            value={formData.regularFee}
                             onChange={(e) =>
-                              handlePeakHourChange(
-                                peakHour.id,
-                                "fee",
-                                e.target.value
-                              )
+                              handleInputChange("regularFee", e.target.value)
                             }
                           />
                         </div>
                       </div>
-
-                      {formData.peakHours.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removePeakHour(peakHour.id)}
-                          className="mt-6 p-1 text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
                     </div>
-                  ))}
-                </div>
+                  </div>
 
-                <div>
-                  <Label className="text-gray-900 text-sm font-medium">
-                    Active Days
-                  </Label>
-                  <div className="flex gap-4 flex-wrap pt-2">
-                    {Object.keys(formData.days).map((day) => (
-                      <label
-                        key={day}
-                        className="flex items-center gap-1 text-sm text-gray-700"
+                  <div className="w-full space-y-2">
+                    <Label className="text-gray-900 text-sm font-medium">
+                      Peak Hours
+                    </Label>
+                    {formData.peakHours.map((peakHour) => (
+                      <div
+                        key={peakHour.id}
+                        className="flex items-center gap-4 mb-2"
                       >
+                        <div className="w-full space-y-1.5">
+                          <Label className="text-sm text-gray-600">From</Label>
+                          <TimePicker
+                            value={peakHour.startTime}
+                            use12Hours={timeFormat === "12 hours"}
+                            format={
+                              timeFormat === "12 hours" ? "h:mm a" : "HH:mm"
+                            }
+                            className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
+                            onChange={(time) =>
+                              handlePeakHourChange(
+                                peakHour.id,
+                                "startTime",
+                                time
+                              )
+                            }
+                            needConfirm={false}
+                          />
+                        </div>
+
+                        <div className="w-full space-y-1.5">
+                          <Label className="text-gray-900 text-sm font-medium">
+                            To
+                          </Label>
+                          <TimePicker
+                            value={peakHour.endTime}
+                            use12Hours={timeFormat === "12 hours"}
+                            format={
+                              timeFormat === "12 hours" ? "h:mm a" : "HH:mm "
+                            }
+                            className="w-full !border-zinc-300 !bg-gray-50 !text-sm !text-gray-700"
+                            onChange={(time) =>
+                              handlePeakHourChange(peakHour.id, "endTime", time)
+                            }
+                            needConfirm={false}
+                          />
+                        </div>
+
+                        <div className="w-full space-y-1.5">
+                          <Label className="text-gray-900 text-sm font-medium">
+                            Fee
+                          </Label>
+                          <div className="relative">
+                            {peakHour.fee !== "" && (
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+                                $
+                              </span>
+                            )}
+                            <input
+                              type="number"
+                              placeholder="e.g $15"
+                              className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 pl-6 text-sm text-gray-700"
+                              value={peakHour.fee}
+                              onChange={(e) =>
+                                handlePeakHourChange(
+                                  peakHour.id,
+                                  "fee",
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+
+                        {formData.peakHours.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removePeakHour(peakHour.id)}
+                            className="mt-6 p-1 text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div>
+                    <Label className="text-gray-900 text-sm font-medium">
+                      Active Days
+                    </Label>
+                    <div className="flex gap-4 flex-wrap pt-2">
+                      {Object.keys(formData.days).map((day) => (
+                        <label
+                          key={day}
+                          className="flex items-center gap-1 text-sm text-gray-700"
+                        >
+                          <input
+                            type="checkbox"
+                            className="accent-teal-800"
+                            checked={
+                              formData.days[day as keyof typeof formData.days]
+                            }
+                            onChange={() =>
+                              handleDayToggle(day as keyof typeof formData.days)
+                            }
+                          />
+                          {day}
+                        </label>
+                      ))}
+                      <label className="flex items-center gap-1 text-sm text-gray-700">
                         <input
                           type="checkbox"
                           className="accent-teal-800"
-                          checked={
-                            formData.days[day as keyof typeof formData.days]
-                          }
-                          onChange={() =>
-                            handleDayToggle(day as keyof typeof formData.days)
-                          }
+                          checked={Object.values(formData.days).every(
+                            (day) => day
+                          )}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            setFormData((prev) => ({
+                              ...prev,
+                              days: {
+                                Mon: isChecked,
+                                Tue: isChecked,
+                                Wed: isChecked,
+                                Thu: isChecked,
+                                Fri: isChecked,
+                                Sat: isChecked,
+                                Sun: isChecked,
+                              },
+                            }));
+                          }}
                         />
-                        {day}
+                        <span>All</span>
                       </label>
-                    ))}
-                    <label className="flex items-center gap-1 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        className="accent-teal-800"
-                        checked={Object.values(formData.days).every(
-                          (day) => day
-                        )}
-                        onChange={(e) => {
-                          const isChecked = e.target.checked;
-                          setFormData((prev) => ({
-                            ...prev,
-                            days: {
-                              Mon: isChecked,
-                              Tue: isChecked,
-                              Wed: isChecked,
-                              Thu: isChecked,
-                              Fri: isChecked,
-                              Sat: isChecked,
-                              Sun: isChecked,
-                            },
-                          }));
-                        }}
-                      />
-                      <span>All</span>
-                    </label>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-start gap-2 bg-white w-full mt-20">
+                    <button
+                      className="bg-teal-800 hover:bg-teal-700 w-[110px] text-white rounded-[12px] px-4 h-10 pr-5 text-xs flex justify-center items-center mt-2"
+                      onClick={handleSave}
+                    >
+                      Save
+                    </button>
+                    <div
+                      className="border border-border_color rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2 cursor-pointer hover:bg-gray-50"
+                      onClick={() => {
+                        resetForm();
+                        setOpenAdd(false);
+                      }}
+                    >
+                      Cancel
+                    </div>
                   </div>
                 </div>
+              </SheetDescription>
+            </SheetContent>
+          </Sheet>
+        </div>
+        <div className="w-[300px] px-3 pt-3">
+          <input
+            type="text"
+            placeholder="Search..."
+            className="border border-gray-300 rounded-md px-3 py-2 w-full text-sm"
+            onChange={(e) => {
+              setSearchSports(e.target.value);
+            }}
+            value={searchSports}
+          />
+          <Search
+            className="relative left-[250px] bottom-7 z-10 text-gray-500"
+            size={16}
+          />
+        </div>
 
-                <div className="flex justify-start gap-2 bg-white w-full mt-20">
-                  <button
-                    className="bg-teal-800 hover:bg-teal-700 w-[110px] text-white rounded-[12px] px-4 h-10 pr-5 text-xs flex justify-center items-center mt-2"
-                    onClick={handleSave}
-                  >
-                    Save
-                  </button>
-                  <div
-                    className="border border-border_color rounded-[12px] px-4 h-10 pr-5 text-xs flex items-center mt-2 cursor-pointer hover:bg-gray-50"
-                    onClick={() => {
-                      resetForm();
-                      setOpenAdd(false);
-                    }}
-                  >
-                    Cancel
+        <div className="w-full border border-zinc-200 rounded-[8px] bg-white text-sm my-2">
+          <Table
+            data={filterSports(sportData, searchSports)}
+            autoHeight
+            className="rounded-[8px]"
+          >
+            <Column width={70} align="center" fixed>
+              <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
+                S.NO
+              </HeaderCell>
+              <Cell>
+                {(rowData: RowDataType<SportData>, rowIndex?: number) => (
+                  <div style={getRowStyle(rowData.availability)}>
+                    {typeof rowIndex === "number" ? rowIndex + 1 : ""}
                   </div>
-                </div>
-              </div>
-            </SheetDescription>
-          </SheetContent>
-        </Sheet>
-      </div>
-      <div className="w-[300px] px-3 pt-3">
-        <input
-          type="text"
-          placeholder="Search..."
-          className="border border-gray-300 rounded-md px-3 py-2 w-full text-sm"
-          onChange={(e) => {
-            setSearchSports(e.target.value);
-          }}
-          value={searchSports}
-        />
-        <Search
-          className="relative left-[250px] bottom-7 z-10 text-gray-500"
-          size={16}
-        />
-      </div>
+                )}
+              </Cell>
+            </Column>
 
-      <div className="w-full border border-zinc-200 rounded-[8px] bg-white text-sm my-2">
-        <Table
-          data={filterSports(sportData, searchSports)}
-          autoHeight
-          className="rounded-[8px]"
-        >
-          <Column width={70} align="center">
-            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>S.NO</HeaderCell>
-            <Cell>
-              {(rowData: RowDataType<SportData>) => (
-                <div style={getRowStyle(rowData.availability)}>
-                  {rowData.id}
-                </div>
-              )}
-            </Cell>
-          </Column>
-
-          <Column width={100} align="center">
-            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>ICON</HeaderCell>
-            <Cell>
-              {(rowData: RowDataType<SportData>) => (
-                <div
-                  className="flex justify-center"
-                  style={getRowStyle(rowData.availability)}
-                >
-                  {getSportIcon(rowData.icon)}
-                </div>
-              )}
-            </Cell>
-          </Column>
-
-          <Column width={200} align="center">
-            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
-              SPORT NAME
-            </HeaderCell>
-            <Cell>
-              {(rowData: RowDataType<SportData>) => (
-                <div style={getRowStyle(rowData.availability)}>
-                  {rowData.sport_name}
-                </div>
-              )}
-            </Cell>
-          </Column>
-
-          <Column flexGrow={120}>
-            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
-              No. OF PLATFORM
-            </HeaderCell>
-            <Cell>
-              {(rowData: RowDataType<SportData>) => (
-                <div style={getRowStyle(rowData.availability)}>
-                  {rowData.platform_count}
-                </div>
-              )}
-            </Cell>
-          </Column>
-
-          <Column flexGrow={120}>
-            <HeaderCell
-              className="uppercase"
-              style={{ backgroundColor: "#f2f2f2" }}
-            >
-              Available Platform
-            </HeaderCell>
-            <Cell>
-              {(rowData: RowDataType<SportData>) => (
-                <div style={getRowStyle(rowData.availability)}>
-                  {getAvailablePlatforms(rowData as SportData)}
-                </div>
-              )}
-            </Cell>
-          </Column>
-
-          <Column flexGrow={120}>
-            <HeaderCell
-              className="uppercase"
-              style={{ backgroundColor: "#f2f2f2" }}
-            >
-              UnAvailable Platform
-            </HeaderCell>
-            <Cell>
-              {(rowData: RowDataType<SportData>) => (
-                <div style={getRowStyle(rowData.availability)}>
-                  {getUnavailablePlatforms(rowData as SportData)}
-                </div>
-              )}
-            </Cell>
-          </Column>
-
-          <Column width={120} align="center">
-            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
-              AVAILABILITY
-            </HeaderCell>
-            <Cell>
-              {(rowData: RowDataType<SportData>) => (
-                <div className="flex justify-center">
-                  <Switch
-                    checked={rowData.availability}
-                    onCheckedChange={() => handleToggleAvailability(rowData.id)}
-                    className="data-[state=checked]:bg-teal-800"
-                  />
-                </div>
-              )}
-            </Cell>
-          </Column>
-
-          <Column width={100} align="center">
-            <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
-              ACTION
-            </HeaderCell>
-            <Cell>
-              {(rowData: RowDataType<SportData>) => (
-                <div className="flex justify-evenly align-middle items-center h-full text-gray-600 gap-3">
+            <Column width={100} align="center">
+              <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
+                ICON
+              </HeaderCell>
+              <Cell>
+                {(rowData: RowDataType<SportData>) => (
                   <div
-                    onClick={() => handleEdit(rowData.id)}
-                    className="flex items-center hover:text-teal-700 cursor-pointer"
+                    className="flex justify-center"
+                    style={getRowStyle(rowData.availability)}
                   >
-                    {editLoaderId === rowData.id ? (
-                      <svg
-                        className="animate-spin h-4 w-4 text-teal-700"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 
+                    {getSportIcon(rowData.icon)}
+                  </div>
+                )}
+              </Cell>
+            </Column>
+
+            <Column width={200} align="center">
+              <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
+                SPORT NAME
+              </HeaderCell>
+              <Cell>
+                {(rowData: RowDataType<SportData>) => (
+                  <div style={getRowStyle(rowData.availability)}>
+                    {rowData.sport_name}
+                  </div>
+                )}
+              </Cell>
+            </Column>
+
+            <Column flexGrow={120}>
+              <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
+                No. OF PLATFORM
+              </HeaderCell>
+              <Cell>
+                {(rowData: RowDataType<SportData>) => (
+                  <div style={getRowStyle(rowData.availability)}>
+                    {rowData.platform_count}
+                  </div>
+                )}
+              </Cell>
+            </Column>
+
+            <Column flexGrow={120}>
+              <HeaderCell
+                className="uppercase"
+                style={{ backgroundColor: "#f2f2f2" }}
+              >
+                Available Platform
+              </HeaderCell>
+              <Cell>
+                {(rowData: RowDataType<SportData>) => (
+                  <div style={getRowStyle(rowData.availability)}>
+                    {getAvailablePlatforms(rowData as SportData)}
+                  </div>
+                )}
+              </Cell>
+            </Column>
+
+            <Column flexGrow={120}>
+              <HeaderCell
+                className="uppercase"
+                style={{ backgroundColor: "#f2f2f2" }}
+              >
+                UnAvailable Platform
+              </HeaderCell>
+              <Cell>
+                {(rowData: RowDataType<SportData>) => (
+                  <div style={getRowStyle(rowData.availability)}>
+                    {getUnavailablePlatforms(rowData as SportData)}
+                  </div>
+                )}
+              </Cell>
+            </Column>
+
+            <Column width={120} align="center">
+              <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
+                AVAILABILITY
+              </HeaderCell>
+              <Cell>
+                {(rowData: RowDataType<SportData>) => (
+                  <div className="flex justify-center">
+                    <Switch
+                      checked={rowData.availability}
+                      onCheckedChange={() =>
+                        handleToggleAvailability(rowData.id)
+                      }
+                      className="data-[state=checked]:bg-teal-800"
+                    />
+                  </div>
+                )}
+              </Cell>
+            </Column>
+
+            <Column width={100} align="center">
+              <HeaderCell style={{ backgroundColor: "#f2f2f2" }}>
+                ACTION
+              </HeaderCell>
+              <Cell>
+                {(rowData: RowDataType<SportData>) => (
+                  <div className="flex justify-evenly align-middle items-center h-full text-gray-600 gap-3">
+                    <div
+                      onClick={() => handleEdit(rowData.id)}
+                      className="flex items-center hover:text-teal-700 cursor-pointer"
+                    >
+                      {editLoaderId === rowData.id ? (
+                        <svg
+                          className="animate-spin h-4 w-4 text-teal-700"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 
                             5.291A7.962 7.962 0 014 12H0c0 3.042 
                             1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                    ) : (
-                      <SquarePen size={16} />
-                    )}
+                          ></path>
+                        </svg>
+                      ) : (
+                        <SquarePen size={16} />
+                      )}
+                    </div>
+                    <AlertDialog
+                      open={sportIdToDelete === rowData.id}
+                      onOpenChange={(open) => {
+                        if (!open) setSportIdToDelete(null);
+                      }}
+                    >
+                      <AlertDialogTrigger asChild>
+                        <Trash2
+                          size={16}
+                          className="hover:text-red-700 cursor-pointer"
+                          onClick={() => setSportIdToDelete(rowData.id)}
+                        />
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Are you sure you want to delete this sport?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently
+                            delete the sport and all its data.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(rowData.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
-                  <AlertDialog
-                    open={sportIdToDelete === rowData.id}
-                    onOpenChange={(open) => {
-                      if (!open) setSportIdToDelete(null);
-                    }}
-                  >
-                    <AlertDialogTrigger asChild>
-                      <Trash2
-                        size={16}
-                        className="hover:text-red-700 cursor-pointer"
-                        onClick={() => setSportIdToDelete(rowData.id)}
-                      />
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          Are you sure you want to delete this sport?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently
-                          delete the sport and all its data.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDelete(rowData.id)}
-                          className="bg-red-600 hover:bg-red-700"
-                        >
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              )}
-            </Cell>
-          </Column>
-        </Table>
+                )}
+              </Cell>
+            </Column>
+          </Table>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
