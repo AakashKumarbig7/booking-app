@@ -18,6 +18,17 @@ import {
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Image from "next/image"
+import toast, { Toaster } from "react-hot-toast";
+const notify = (message: string, success: boolean) =>
+  toast[success ? "success" : "error"](message, {
+    style: {
+      borderRadius: "10px",
+      background: "#fff",
+      color: "#000",
+    },
+    position: "top-center",
+    duration: 3000,
+  });
 
 const SideBar = () => {
   // const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -33,7 +44,7 @@ const SideBar = () => {
     "/organisation",
     "staff-management",
     "sports-management",
-    "pos-setting",
+    "product-management",
     "loyalty-management",
     "notifications",
     "reports-and-analytics",
@@ -43,7 +54,7 @@ const SideBar = () => {
     { name: "organisation", icon: <Building2 size={18} />, label: "Organisation" },
     { name: "staff-management", icon: <Users2 size={18} />, label: "Staff Management" },
     { name: "sports-management", icon: <FlagTriangleRight size={18} />, label: "Sports Management" },
-    { name: "pos-setting", icon: <ShoppingCart size={18} />, label: "POS Settings" },
+    { name: "product-management", icon: <ShoppingCart size={18} />, label: "Product Management" },
     { name: "loyalty-management", icon: <Crown size={18} />, label: "Loyalty Management" },
     { name: "notifications", icon: <Bell size={18} />, label: "Notification" },
     { name: "reports-and-analytics", icon: <BarChart3 size={18} />, label: "Reports & Analytics" },
@@ -55,6 +66,8 @@ const SideBar = () => {
     if (!user) router.push("/login")
     await supabase.auth.signOut()
     router.push("/login")
+    notify("Logged out successfully", true)
+
   }
 
   useEffect(() => {
@@ -73,6 +86,7 @@ const SideBar = () => {
 
   return (
     <div className="h-full">
+      <Toaster />
       <div
         className={` relative h-screen  ${
           collapsed ? "w-16 hover:w-[220px]" : "w-[220px]"

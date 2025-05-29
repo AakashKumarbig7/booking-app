@@ -128,7 +128,7 @@ export default function EditSportPage({
 
   const unwrappedParams = use(params)
   const sportId = Number.parseInt(unwrappedParams.id)
-
+  const [loading, setLoading] = useState(false)
   const [timeFormat, setTimeFormat] = useState("12 hours")
   const [courtSearchQuery, setCourtSearchQuery] = useState("")
   const [saveLoader, setSaveLoader] = useState(false)
@@ -159,6 +159,7 @@ export default function EditSportPage({
   const [courtData, setCourtData] = useState<CourtSettings[]>([])
 
   const fetchSportData = useCallback(async () => {
+    setLoading(true)
     try {
       const { data, error } = await supabase
         .from("companies")
@@ -296,6 +297,7 @@ export default function EditSportPage({
     } catch (error) {
       console.error("Error fetching sport data:", error)
     }
+    setLoading(false)
   }, [currentUser?.email, sportId, supabase])
 
   useEffect(() => {
@@ -748,10 +750,7 @@ export default function EditSportPage({
                 onChange={(e) => handleEditInputChange("platformName", e.target.value)}
               />
             </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="flex-1 space-y-2">
+             <div className="w-full space-y-2">
               <Label className="text-gray-900 text-sm font-medium">No. of Platform</Label>
               <input
                 type="number"
@@ -761,6 +760,19 @@ export default function EditSportPage({
                 onChange={(e) => handleEditInputChange("platformCount", e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="flex gap-4">
+            {/* <div className="flex-1 space-y-2">
+              <Label className="text-gray-900 text-sm font-medium">No. of Platform</Label>
+              <input
+                type="number"
+                placeholder="e.g 2"
+                className="w-full border border-zinc-300 rounded-md bg-gray-50 p-2 text-sm text-gray-700"
+                value={editFormData.platformCount}
+                onChange={(e) => handleEditInputChange("platformCount", e.target.value)}
+              />
+            </div> */}
 
             <div className="flex-1 space-y-2">
               <Label className="text-gray-900 text-sm font-medium">Platform Timing</Label>
@@ -867,6 +879,7 @@ export default function EditSportPage({
           <div className="w-full border border-zinc-200 rounded-[8px] bg-white text-sm my-6">
             <Table
               data={courtData.filter((court) => court.name.toLowerCase().includes(courtSearchQuery.toLowerCase()))}
+              loading={loading}
               autoHeight={false}
               className="rounded-[8px]"
               rowHeight={170}
@@ -904,7 +917,7 @@ export default function EditSportPage({
                       disabled={!rowData?.availability}
                     />
                   </div>
-                  
+                    
                   )}
                 </Cell>
               </Column>

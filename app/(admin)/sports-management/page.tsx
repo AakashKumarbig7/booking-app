@@ -179,6 +179,7 @@ export default function SportsManagementPage() {
   const [sportIdToDelete, setSportIdToDelete] = useState<number | null>(null);
   const [editLoaderId, setEditLoaderId] = useState<number | null>(null);
   const [searchSports, setSearchSports] = useState<string>("");
+  const [loading, setLoading] = useState(false);
 
   const getAvailableCourtCount = useCallback((sport: SportData): number => {
     if (!sport.availability) return 0;
@@ -198,6 +199,8 @@ export default function SportsManagementPage() {
         console.log("No current user available");
         return;
       }
+
+      setLoading(true);
 
       const { data, error } = await supabase
         .from("companies")
@@ -245,8 +248,13 @@ export default function SportsManagementPage() {
           console.log("Sports Management Data:", transformedData);
         }
       }
-    } catch (error) {
+    }
+   
+     catch (error) {
       console.error("Error fetching sports management data:", error);
+    }
+    finally {
+      setLoading(false);
     }
   }, [currentUser?.email, getAvailableCourtCount, supabase]);
 
@@ -676,9 +684,9 @@ export default function SportsManagementPage() {
 
   return (
     <>
-      <div className="w-full bg-white p-4">
+      <div className="w-full bg-white p-4 ">
         <Toaster />
-        <div className="px-4 py-2 flex items-center justify-between">
+        <div className="py-2 flex items-center justify-between">
           <div className="items-center gap-2">
             <h1 className="text-xl font-bold text-zinc-950">
               Sport Management
@@ -1036,7 +1044,7 @@ export default function SportsManagementPage() {
             </SheetContent>
           </Sheet>
         </div>
-        <div className="w-[300px] px-3 pt-3">
+        <div className="w-[300px]  pt-3">
           <input
             type="text"
             placeholder="Search..."
@@ -1047,15 +1055,16 @@ export default function SportsManagementPage() {
             value={searchSports}
           />
           <Search
-            className="relative left-[250px] bottom-7 z-10 text-gray-500"
+            className="relative left-[270px] bottom-7 z-10 text-gray-500"
             size={16}
           />
         </div>
 
-        <div className="w-full border border-zinc-200 rounded-[8px] bg-white text-sm my-2">
+        <div className="w-full border border-zinc-200  rounded-[8px] bg-white text-sm my-2">
           <Table
             data={filterSports(sportData, searchSports)}
             autoHeight
+            loading={loading}
             className="rounded-[8px]"
           >
             <Column width={70} align="center" fixed>

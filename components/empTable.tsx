@@ -25,19 +25,19 @@ interface Employee {
 
 interface EmployeeTableProps {
   employees: Employee[]
-  // loading: boolean
+  loading: boolean
   onEditClick: (employee: Employee) => void
   onDeleteClick: (employee: Employee) => void
 }
 
-const EmployeeTable = ({ employees,  onEditClick, onDeleteClick }: EmployeeTableProps) => {
+const EmployeeTable = ({ employees,  onEditClick, onDeleteClick, loading }: EmployeeTableProps) => {
   const { Column, HeaderCell, Cell } = Table
 
   return (
     <div className="w-full border border-border_color rounded-[8px] bg-white text-sm my-2">
       <Table
         data={employees}
-        // loading={loading}
+        loading={loading}
        autoHeight
        className="rounded-[8px]"
         onRowClick={(rowData) => {

@@ -64,6 +64,7 @@ const notify = (message: string, success: boolean) =>
 const EmployeeAdd = () => {
   const supabase = createClient()
   const [openAdd, setOpenAdd] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [openEdit, setOpenEdit] = useState(false)
   const [openDelete, setOpenDelete] = useState(false)
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -120,6 +121,7 @@ const EmployeeAdd = () => {
   }, [])
 
   const fetchData = async () => {
+    setLoading(true)
     // Get current authenticated user
     const { data: userData } = await supabase.auth.getUser()
 
@@ -135,6 +137,7 @@ const EmployeeAdd = () => {
     } else if (data) {
       setEmployees(data)
     }
+    setLoading(false)
   }
 
   const handleInputChange = (id: string, value: string) => {
@@ -490,7 +493,8 @@ const EmployeeAdd = () => {
       </AlertDialog>
 
       {/* Employee Table */}
-      <EmployeeTable employees={filteredEmployees} onEditClick={handleEditClick} onDeleteClick={handleDeleteClick} />
+      <EmployeeTable employees={filteredEmployees} onEditClick={handleEditClick} onDeleteClick={handleDeleteClick} 
+      loading={loading}/>
     </>
   )
 }

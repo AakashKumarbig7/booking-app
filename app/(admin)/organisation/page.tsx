@@ -17,6 +17,7 @@ import dayjs from "dayjs";
 import Holidays from "@/components/holiday";
 import toast, { Toaster } from "react-hot-toast";
 import { useGlobalContext } from "@/context/store";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Day =
   | "Monday"
@@ -53,7 +54,7 @@ const notify = (message: string, success: boolean) =>
 const Organisation = () => {
   const {user: currentUser} = useGlobalContext()
   const supabase = createClient();
-  // const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [timezone, setTimezone] = useState(
     "(+11:00) Australian Eastern Daylight Time (Australia/Melbourne)"
   );
@@ -217,7 +218,7 @@ const Organisation = () => {
   }, [currentUser]);
 
   async function fetchData() {
-    // setLoading(true);
+    setLoading(true);
 
     const { data: user } = await supabase.auth.getUser();
 console.log("user",user)
@@ -263,7 +264,7 @@ console.log("user",user)
       setCompanyDays(getSortedDays(company.week_start_day));
       setWorkingTime(company.working_time);
     }
-    // setLoading(false);
+    setLoading(false);
   }
 
   async function handleSave() {
@@ -346,13 +347,15 @@ console.log("user",user)
                     <Label className="text-sm font-medium text-zinc-900">
                       Company Name
                     </Label>
-                    <Input
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      type="text"
-                      placeholder="Enter your company name"
-                      className="w-full border border-zinc-300"
-                    />
+                    {loading ?<div className='px-3 py-[10px] bg-white-50 text-sm border border-gray-200 rounded-[6px] text-gray-800' > <Skeleton className="h-4 w-[150px] rounded"  /> </div>: (
+                      <Input
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        type="text"
+                        placeholder="Enter your company name"
+                        className="w-full border border-zinc-300"
+                      />
+                    )}
                   </div>
 
                   {/* Business Type */}
@@ -360,6 +363,7 @@ console.log("user",user)
                     <Label className="text-sm font-medium text-zinc-900">
                       Business Type
                     </Label>
+                    {loading ?<div className='px-3 py-[10px] bg-white-50 text-sm border border-gray-200 rounded-[6px] text-gray-800' > <Skeleton className="h-4 w-[150px] rounded"  /> </div>: (
                     <Input
                       type="text"
                       value={businessType}
@@ -367,6 +371,7 @@ console.log("user",user)
                       placeholder="Enter your business type"
                       className="w-full border border-zinc-300"
                     />
+                    )}
                   </div>
 
                   {/* Timezone */}
@@ -377,6 +382,7 @@ console.log("user",user)
                     >
                       Time Zone
                     </Label>
+                    {loading ?<div className='px-3 py-[10px] bg-white-50 text-sm border border-gray-200 rounded-[6px] text-gray-800' > <Skeleton className="h-4 w-[150px] rounded"  /> </div>: (
                     <Select value={timezone} onValueChange={setTimezone}>
                       <SelectTrigger className="w-full border border-zinc-300 text-sm text-gray-700">
                         <SelectValue placeholder="Select a time zone" />
@@ -390,6 +396,7 @@ console.log("user",user)
                         </SelectGroup>
                       </SelectContent>
                     </Select>
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-3 ">
@@ -400,6 +407,7 @@ console.log("user",user)
                     >
                       Country
                     </Label>
+                    {loading ?<div className='px-3 py-[10px] bg-white-50 text-sm border border-gray-200 rounded-[6px] text-gray-900' > <Skeleton className="h-4 w-[150px] rounded"  /> </div>: (
                     <Select
                       value={selectedCountry}
                       onValueChange={setSelectedCountry}
@@ -417,6 +425,7 @@ console.log("user",user)
                         </SelectGroup>
                       </SelectContent>
                     </Select>
+                    )}
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label
@@ -425,6 +434,7 @@ console.log("user",user)
                     >
                       Currency
                     </Label>
+                    {loading ?<div className='px-3 py-[10px] bg-white-50 text-sm border border-gray-200 rounded-[6px] text-gray-800' > <Skeleton className="h-4 w-[150px] rounded"  /> </div>: (
                     <Select
                       value={selectedCurrency}
                       onValueChange={setSelectedCurrency}
@@ -449,6 +459,7 @@ console.log("user",user)
                         </SelectGroup>
                       </SelectContent>
                     </Select>
+                    )}
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label
@@ -457,6 +468,7 @@ console.log("user",user)
                     >
                       Language
                     </Label>
+                    {loading ?<div className='px-3 py-[10px] bg-white-50 text-sm border border-gray-200 rounded-[6px] text-gray-800' > <Skeleton className="h-4 w-[150px] rounded"  /> </div>: (
                     <Select value={language} onValueChange={setLanguage}>
                       <SelectTrigger className="w-full border border-zinc-300 text-sm text-gray-700">
                         <SelectValue placeholder="Select a language" />
@@ -469,6 +481,7 @@ console.log("user",user)
                         </SelectGroup>
                       </SelectContent>
                     </Select>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 p-2 pt-3">
